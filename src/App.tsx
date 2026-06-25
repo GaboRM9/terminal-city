@@ -6,6 +6,7 @@ import { EventLog } from './components/EventLog';
 import { MiniMap } from './components/MiniMap';
 import { Pixelgram } from './components/Pixelgram';
 import { BuildCatalog } from './components/BuildCatalog';
+import { ChartsPanel } from './components/ChartsPanel';
 import { useGameStore } from './store/gameStore';
 
 // ─────────────────────────────────────────────
@@ -68,7 +69,7 @@ function VictoryOverlay(): JSX.Element | null {
 }
 
 export function App(): JSX.Element {
-  const { state, setSpeed, showLivestats, toggleLivestats } = useGameStore();
+  const { state, setSpeed, showLivestats, showCharts, toggleLivestats, toggleCharts } = useGameStore();
 
   useEffect(() => {
     setSpeed(1);
@@ -106,24 +107,31 @@ export function App(): JSX.Element {
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span>Tick #{state.tickCount} | {state.tiles.filter((t) => t.type !== 'empty').length} tiles</span>
-          {/* Livestats toggle pill */}
-          <button
-            onClick={toggleLivestats}
-            title="Alternar entre Pixelgram y LiveStats (o escribe 'livestats')"
-            style={{
-              background: showLivestats ? '#0a2a0a' : 'transparent',
-              border: `1px solid ${showLivestats ? '#00ff41' : '#333'}`,
-              color: showLivestats ? '#00ff41' : '#444',
-              cursor: 'pointer',
-              padding: '1px 8px',
-              fontSize: 10,
-              fontFamily: 'inherit',
-              borderRadius: 2,
-              letterSpacing: 1,
-            }}
-          >
-            {showLivestats ? '◈ LIVESTATS' : '◆ PIXELGRAM'}
-          </button>
+          {/* Panel toggle pills */}
+          {(['pixelgram', 'livestats', 'charts'] as const).map((panel) => {
+            const active = panel === 'livestats' ? showLivestats : panel === 'charts' ? showCharts : (!showLivestats && !showCharts);
+            const labels: Record<string, string> = { pixelgram: '◆ PIXELGRAM', livestats: '◈ LIVESTATS', charts: '▲ GRÁFICOS' };
+            const onClick = panel === 'livestats' ? toggleLivestats : panel === 'charts' ? toggleCharts : () => { if (showLivestats) toggleLivestats(); if (showCharts) toggleCharts(); };
+            return (
+              <button
+                key={panel}
+                onClick={onClick}
+                style={{
+                  background: active ? '#0a2a0a' : 'transparent',
+                  border: `1px solid ${active ? '#00ff41' : '#333'}`,
+                  color: active ? '#00ff41' : '#444',
+                  cursor: 'pointer',
+                  padding: '1px 8px',
+                  fontSize: 10,
+                  fontFamily: 'inherit',
+                  borderRadius: 2,
+                  letterSpacing: 1,
+                }}
+              >
+                {labels[panel]}
+              </button>
+            );
+          })}
         </span>
       </div>
 
@@ -150,22 +158,15 @@ export function App(): JSX.Element {
           }}
         >
           {showLivestats ? (
-            /* LiveStats mode: simulation log + minimap */
             <>
               <EventLog />
-              <div
-                style={{
-                  borderTop: '1px solid #1a3a1a',
-                  padding: '6px 8px',
-                  backgroundColor: '#080808',
-                  flexShrink: 0,
-                }}
-              >
+              <div style={{ borderTop: '1px solid #1a3a1a', padding: '6px 8px', backgroundColor: '#080808', flexShrink: 0 }}>
                 <MiniMap />
               </div>
             </>
+          ) : showCharts ? (
+            <ChartsPanel />
           ) : (
-            /* Default: Pixelgram social feed */
             <Pixelgram />
           )}
 

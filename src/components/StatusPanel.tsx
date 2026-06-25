@@ -79,9 +79,24 @@ function MilestonePill(): JSX.Element {
   );
 }
 
+const SPARK_CHARS = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+
+function miniSparkline(values: number[], color: string): JSX.Element {
+  if (values.length < 2) return <></>;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const chars = values.slice(-6).map((v) => {
+    const idx = Math.round(((v - min) / range) * (SPARK_CHARS.length - 1));
+    return SPARK_CHARS[Math.max(0, Math.min(SPARK_CHARS.length - 1, idx))];
+  }).join('');
+  return <span style={{ color, fontSize: 11, letterSpacing: 0 }}>{chars}</span>;
+}
+
 export function StatusPanel(): JSX.Element {
   const { state } = useGameStore();
-  const { economy, population, happiness, year, month, speed, running, rciDemand } = state;
+  const { economy, population, happiness, year, month, speed, running, rciDemand, history } = state;
+  const popHistory = history.map((h) => h.population);
 
   const speedLabel = running ? `▶ ${speed === 'pause' ? 'PAUSA' : `x${speed}`}` : '⏸ PAUSA';
   const balanceColor = economy.balance < 2_000 ? TERM_RED
@@ -121,9 +136,10 @@ export function StatusPanel(): JSX.Element {
         )}
       </span>
 
-      <span>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
         <span style={{ color: TERM_DIM }}>👥 </span>
         <span style={{ color: TERM_GREEN }}>{population.toLocaleString()}</span>
+        {miniSparkline(popHistory, '#006618')}
       </span>
 
       <span>

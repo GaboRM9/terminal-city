@@ -26,6 +26,10 @@ const BASE_MAP: Record<ZoneType, TileRenderConfig> = {
   police_station: { char: 'P', color: '#2244ff' },
   power_plant: { char: 'E', color: '#ffee00' },
   water_pump: { char: 'W', color: '#00aaff' },
+  hospital: { char: 'H', color: '#ff4488' },
+  school: { char: 'S', color: '#44ccff' },
+  university: { char: 'U', color: '#aa88ff' },
+  waste_plant: { char: 'Z', color: '#44aa66' },
   granary: { char: 'G', color: '#aa8800' },
   mill: { char: 'M', color: '#cc9900' },
   bakery: { char: 'B', color: '#ddaa00' },
@@ -50,12 +54,25 @@ const RESIDENTIAL_COLORS: Record<number, string> = {
   3: '#00ff41',
 };
 
+/** Color hint for empty residential tiles based on density cap */
+const DENSITY_CAP_HINT: Record<number, string> = {
+  1: '#0d1a0d', // low  — barely visible
+  2: '#0d2210', // medium — faint green
+  3: '#0d2e13', // high — slightly more visible
+};
+
 export function getTileRenderConfig(tile: Tile): TileRenderConfig {
   if (tile.damaged) {
     return { char: 'X', color: '#880000' };
   }
 
   if (tile.type === 'residential') {
+    if (tile.zoneLevel === 0) {
+      return {
+        char: tile.variant === '·' ? '·' : tile.variant === '∙' ? '∙' : '.',
+        color: DENSITY_CAP_HINT[tile.densityCap ?? 3] ?? '#1a1a1a',
+      };
+    }
     return {
       char: RESIDENTIAL_DENSITY[tile.zoneLevel] ?? '.',
       color: RESIDENTIAL_COLORS[tile.zoneLevel] ?? '#1a1a1a',
@@ -100,6 +117,10 @@ export const TILE_LEGEND: Array<{ type: ZoneType; char: string; label: string }>
   { type: 'police_station', char: 'P', label: 'Policía' },
   { type: 'power_plant', char: 'E', label: 'Planta Eléctrica' },
   { type: 'water_pump', char: 'W', label: 'Bomba de Agua' },
+  { type: 'hospital', char: 'H', label: 'Hospital' },
+  { type: 'school', char: 'S', label: 'Escuela' },
+  { type: 'university', char: 'U', label: 'Universidad' },
+  { type: 'waste_plant', char: 'Z', label: 'Planta de Residuos' },
   { type: 'granary', char: 'G', label: 'Granero' },
   { type: 'mill', char: 'M', label: 'Molino' },
   { type: 'bakery', char: 'B', label: 'Panadería' },

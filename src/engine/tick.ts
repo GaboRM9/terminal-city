@@ -1,6 +1,7 @@
 import type { GameState, LogEntry } from './types';
 import { refreshCoverage } from './services';
-import { applyMonthlyEconomics, computeHappiness } from './economy';
+import { applyMonthlyEconomics, computeHappiness, processBondPayments } from './economy';
+import { computePollution, pollutionPopCapMultiplier } from './pollution';
 import { evaluateProductionChains, isTierUnlocked } from './production';
 import { generateEvents } from './events';
 import { computeTotalPopulation } from './world';
@@ -59,10 +60,28 @@ function updatePopulation(state: GameState): GameState {
         (tile.coverage.garbage ? 1 : 0) +
         (tile.coverage.police ? 1 : 0) +
         (tile.coverage.fire ? 1 : 0) +
-        (tile.coverage.education ? 1 : 0);
+        (tile.coverage.education ? 1 : 0) +
+        (tile.coverage.health ? 1 : 0);
 
-      const maxPop = tile.zoneLevel * BALANCE.populationPerZoneLevel;
-      const canGrow = tile.zoneLevel < maxTier && tile.zoneLevel < 3 && serviceScore >= 3;
+      // Without health (hospital) coverage, residential zones can't exceed level 2
+      const hasHealthCoverage = !!(tile.coverage.health);
+      const effectiveMaxTier = (tile.type === 'residential' && !hasHealthCoverage)
+        ? Math.min(maxTier, 2)
+        : maxTier;
+
+      // Density cap set by player; high-density residential also needs clean air + all services
+      const cap = tile.densityCap ?? 3;
+      const highDensityMet =
+        cap < 3 ||
+        tile.type !== 'residential' ||
+        ((tile.pollution ?? 0) < 30 && serviceScore >= 7);
+      const effectiveMaxLevel = highDensityMet
+        ? Math.min(effectiveMaxTier, cap)
+        : Math.min(effectiveMaxTier, cap, 2);
+
+      const pollutionCapMult = pollutionPopCapMultiplier(tile.pollution ?? 0);
+      const maxPop = Math.floor(tile.zoneLevel * BALANCE.populationPerZoneLevel * pollutionCapMult);
+      const canGrow = tile.zoneLevel < effectiveMaxLevel && tile.zoneLevel < 3 && serviceScore >= 3 && (tile.pollution ?? 0) < 80;
 
       // Demand multiplier: high demand = faster growth, low = slower
       const demand = state.rciDemand;
@@ -75,7 +94,7 @@ function updatePopulation(state: GameState): GameState {
       let growth = 0;
       if (serviceScore >= 2) {
         growth = Math.floor(
-          BALANCE.basePopGrowth * (serviceScore / 6) * (state.happiness / 100) * demandFactor,
+          BALANCE.basePopGrowth * (serviceScore / 7) * (state.happiness / 100) * demandFactor,
         );
         if (migrationBoost) growth = Math.floor(growth * 1.5);
       } else if (serviceScore === 0) {
@@ -102,12 +121,15 @@ function updatePopulation(state: GameState): GameState {
   return { ...state, tiles };
 }
 
-/** Update variant chars for all tiles based on zone level */
+/** Update variant chars for all tiles based on zone level and density cap */
 function refreshVariants(state: GameState): GameState {
-  const resChars: Record<number, string> = { 0: '.', 1: '░', 2: '▒', 3: '█' };
+  // Level-0 residential: show density cap as a subtle dot variant
+  const emptyDotByCap: Record<number, string> = { 1: '·', 2: '∙', 3: '.' };
+  const resChars: Record<number, string> = { 1: '░', 2: '▒', 3: '█' };
   const tiles = state.tiles.map((t) => {
     if (t.type === 'residential') {
-      return { ...t, variant: resChars[t.zoneLevel] ?? '.' };
+      if (t.zoneLevel === 0) return { ...t, variant: emptyDotByCap[t.densityCap ?? 3] ?? '.' };
+      return { ...t, variant: resChars[t.zoneLevel] ?? '░' };
     }
     return t;
   });
@@ -127,6 +149,9 @@ export function tick(state: GameState): GameState {
   // 2. Recalculate service coverage
   next = refreshCoverage(next);
 
+  // 2b. Recompute pollution (uses updated tile types)
+  next = computePollution(next);
+
   // 3. Evaluate production chains
   next = evaluateProductionChains(next);
 
@@ -142,6 +167,7 @@ export function tick(state: GameState): GameState {
 
   // 6. Apply monthly economics
   next = applyMonthlyEconomics(next);
+  next = processBondPayments(next);
 
   // 7. Compute total population
   const population = computeTotalPopulation(next);
@@ -193,6 +219,21 @@ export function tick(state: GameState): GameState {
 
   // 12. Check milestones (may add bonus balance + posts + log entries)
   next = checkMilestones(next);
+
+  // 13. Append history snapshot (keep last 24 months)
+  const snapshot = {
+    month: next.month,
+    year: next.year,
+    population: next.population,
+    balance: next.economy.balance,
+    happiness: next.happiness,
+    income: next.economy.lastIncome,
+    expenses: next.economy.lastExpenses,
+    rDemand: next.rciDemand.r,
+    cDemand: next.rciDemand.c,
+    iDemand: next.rciDemand.i,
+  };
+  next = { ...next, history: [...next.history, snapshot].slice(-24) };
 
   return next;
 }
