@@ -1,7 +1,7 @@
 import type { CommandDefinition, GameState, ServiceType, ZoneType } from '../engine/types';
 import { parseCoords, parseIntArg } from './parser';
 import { zoneTile, demolishTile, traceRoad, recalculateRoadAccess } from '../engine/world';
-import { setTaxRate, setServiceBudget } from '../engine/economy';
+import { setTaxRate, setServiceBudget, issueBond, computeBondRating } from '../engine/economy';
 import { tick } from '../engine/tick';
 import { BUILDINGS } from '../data/buildings';
 import { TILE_LEGEND } from '../renderer/asciiMap';
@@ -27,6 +27,7 @@ const VALID_ZONES = new Set<ZoneType>([
 
 const VALID_BUILDINGS = new Set<ZoneType>([
   'fire_station', 'police_station', 'power_plant', 'water_pump',
+  'hospital', 'school', 'university',
   'granary', 'mill', 'bakery', 'iron_mine', 'foundry', 'tools_workshop',
 ]);
 
@@ -211,6 +212,9 @@ export const COMMANDS: CommandDefinition[] = [
         .join('\n');
 
       const { rciDemand: d } = state;
+      const rating = computeBondRating(state);
+      const bondPayments = state.economy.bonds.reduce((s, b) => s + b.monthlyPayment, 0);
+
       const msg = [
         `=== ESTADÍSTICAS DE LA CIUDAD ===`,
         `Año ${state.year}, Mes ${state.month}`,
@@ -221,6 +225,8 @@ export const COMMANDS: CommandDefinition[] = [
         `Impuesto: ${state.economy.taxRate}%`,
         `Ingresos (último mes): $${state.economy.lastIncome}`,
         `Gastos (último mes): $${state.economy.lastExpenses}`,
+        `Bonos activos: ${state.economy.bonds.length} (pago mensual: $${bondPayments})`,
+        `Calificación crediticia: ${rating}`,
         `--- Demanda RCI ---`,
         `  R (residencial): ${d.r}% — ${demandLabel(d.r)}`,
         `  C (comercial):   ${d.c}% — ${demandLabel(d.c)}`,
@@ -275,26 +281,110 @@ export const COMMANDS: CommandDefinition[] = [
     },
   },
 
-  // ── save ──
+  // ── undo ──
   {
-    name: 'save',
-    aliases: [],
-    description: 'Guarda la partida en localStorage',
-    usage: 'save',
+    name: 'undo',
+    aliases: ['u'],
+    description: 'Deshace la última acción de construcción (hasta 10 niveles)',
+    usage: 'undo',
     execute(_args, state): [GameState, ReturnType<typeof ok>] {
-      // Actual saving is handled by the store; this just returns the signal
-      return [state, { success: true, message: '__SAVE__', severity: 'info' }];
+      return [state, { success: true, message: '__UNDO__', severity: 'info' }];
     },
   },
 
-  // ── load ──
+  // ── save [slot] ──
+  {
+    name: 'save',
+    aliases: [],
+    description: 'Guarda la partida en una ranura (0-2, por defecto 0)',
+    usage: 'save [0|1|2]',
+    execute(args, state): [GameState, ReturnType<typeof ok>] {
+      const slot = args.length > 0 ? parseIntArg(args[0]) : 0;
+      if (slot === null || slot < 0 || slot > 2) {
+        return [state, err('Ranura inválida. Usa: 0, 1 o 2')];
+      }
+      return [state, { success: true, message: `__SAVE_${slot}__`, severity: 'info' }];
+    },
+  },
+
+  // ── load [slot] ──
   {
     name: 'load',
     aliases: [],
-    description: 'Carga la partida guardada',
-    usage: 'load',
+    description: 'Carga la partida desde una ranura (0-2, por defecto 0)',
+    usage: 'load [0|1|2]',
+    execute(args, state): [GameState, ReturnType<typeof ok>] {
+      const slot = args.length > 0 ? parseIntArg(args[0]) : 0;
+      if (slot === null || slot < 0 || slot > 2) {
+        return [state, err('Ranura inválida. Usa: 0, 1 o 2')];
+      }
+      return [state, { success: true, message: `__LOAD_${slot}__`, severity: 'info' }];
+    },
+  },
+
+  // ── saves ──
+  {
+    name: 'saves',
+    aliases: [],
+    description: 'Lista las ranuras de guardado disponibles',
+    usage: 'saves',
     execute(_args, state): [GameState, ReturnType<typeof ok>] {
-      return [state, { success: true, message: '__LOAD__', severity: 'info' }];
+      return [state, { success: true, message: '__SAVES__', severity: 'info' }];
+    },
+  },
+
+  // ── bond <amount> ──
+  {
+    name: 'bond',
+    aliases: ['bono'],
+    description: 'Emite un bono municipal para financiar infraestructura (20 años)',
+    usage: 'bond <monto>',
+    execute(args, state): [GameState, ReturnType<typeof ok>] {
+      if (args.length < 1) return [state, err('Uso: bond <monto>')];
+      const amount = parseIntArg(args[0]);
+      if (amount === null || amount <= 0) return [state, err('El monto debe ser un número positivo.')];
+      const [next, message] = issueBond(state, amount);
+      return [next, next === state ? err(message) : ok(message)];
+    },
+  },
+
+  // ── view bonds ──
+  {
+    name: 'view bonds',
+    aliases: ['bonds', 'bonos'],
+    description: 'Muestra bonos activos y calificación crediticia',
+    usage: 'view bonds',
+    execute(_args, state): [GameState, ReturnType<typeof ok>] {
+      const rating = computeBondRating(state);
+      const { bonds } = state.economy;
+      const totalMonthly = bonds.reduce((s, b) => s + b.monthlyPayment, 0);
+
+      const bondLines = bonds.length === 0
+        ? ['  (sin bonos activos)']
+        : bonds.map((b) =>
+            `  $${b.amount} al ${(b.interestRate * 100).toFixed(0)}% — $${b.monthlyPayment}/mes — ${b.monthsRemaining} meses restantes`,
+          );
+
+      const msg = [
+        '=== BONOS MUNICIPALES ===',
+        `Calificación crediticia: ${rating}`,
+        `Pago mensual total: $${totalMonthly}`,
+        `Bonos activos: ${bonds.length}`,
+        ...bondLines,
+      ].join('\n');
+
+      return [state, ok(msg)];
+    },
+  },
+
+  // ── view charts ──
+  {
+    name: 'view charts',
+    aliases: ['charts'],
+    description: 'Muestra gráficos sparkline de los últimos 24 meses',
+    usage: 'view charts',
+    execute(_args, state): [GameState, ReturnType<typeof ok>] {
+      return [state, { success: true, message: '__CHARTS__', severity: 'info' }];
     },
   },
 

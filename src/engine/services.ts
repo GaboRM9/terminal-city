@@ -20,9 +20,9 @@ export function tileServices(tile: Tile): ServiceType[] {
   return (Object.keys(tile.coverage) as ServiceType[]).filter((s) => tile.coverage[s]);
 }
 
-/** Number of services covered on a tile (max 6) */
+/** Number of services covered on a tile (max 7) */
 export function tileServiceScore(tile: Tile): number {
-  const services: ServiceType[] = ['water', 'electricity', 'garbage', 'police', 'fire', 'education'];
+  const services: ServiceType[] = ['water', 'electricity', 'garbage', 'police', 'fire', 'education', 'health'];
   return services.filter((s) => tile.coverage[s]).length;
 }
 

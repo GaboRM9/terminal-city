@@ -92,6 +92,27 @@ function tryRecessionEvent(state: GameState): GameEvent | null {
   );
 }
 
+/** Disease outbreak when health coverage is critically low and population exists */
+function tryDiseaseOutbreakEvent(state: GameState): GameEvent | null {
+  if (Math.random() > BALANCE.diseaseOutbreakProbability) return null;
+
+  const inhabited = state.tiles.filter(
+    (t) => (t.type === 'residential' || t.type === 'commercial') && t.population > 0,
+  );
+  if (inhabited.length === 0) return null;
+
+  const uncovered = inhabited.filter((t) => !t.coverage.health);
+  const ratio = uncovered.length / inhabited.length;
+  if (ratio < 0.6) return null; // only triggers when 60%+ of zones lack health coverage
+
+  return makeEvent(
+    state.year,
+    state.month,
+    `¡Brote de enfermedad! El ${Math.round(ratio * 100)}% de la ciudad carece de cobertura sanitaria. Construye un hospital.`,
+    'critical',
+  );
+}
+
 /** Underground water discovery */
 function tryWaterDiscoveryEvent(state: GameState): GameEvent | null {
   if (Math.random() > BALANCE.waterDiscoveryProbability) return null;
@@ -107,6 +128,17 @@ function tryWaterDiscoveryEvent(state: GameState): GameEvent | null {
     'info',
     { x: target.x, y: target.y },
   );
+}
+
+/** Apply disease outbreak: reduce population by 5% across all unprotected residential tiles */
+export function applyDiseaseOutbreak(state: GameState): GameState {
+  const tiles = state.tiles.map((t) => {
+    if ((t.type === 'residential' || t.type === 'commercial') && t.population > 0 && !t.coverage.health) {
+      return { ...t, population: Math.max(0, Math.floor(t.population * 0.95)) };
+    }
+    return t;
+  });
+  return { ...state, tiles };
 }
 
 /** Apply damage to tiles from a fire event */
@@ -147,6 +179,32 @@ export function applyRecession(state: GameState): GameState {
   };
 }
 
+/** Bond default crisis: 3+ months of negative cashflow while bonds are active */
+function tryBondDefaultEvent(state: GameState): GameEvent | null {
+  if (state.economy.bonds.length === 0) return null;
+  if (state.economy.bondDefaultRisk < 3) return null;
+
+  return makeEvent(
+    state.year,
+    state.month,
+    `¡CRISIS DE BONOS! La ciudad lleva ${state.economy.bondDefaultRisk} meses sin poder cubrir los pagos. Calificación crediticia en riesgo.`,
+    'critical',
+  );
+}
+
+/** Apply bond default: happiness crash and debt spike */
+export function applyBondDefault(state: GameState): GameState {
+  return {
+    ...state,
+    happiness: Math.max(0, state.happiness - 15),
+    economy: {
+      ...state.economy,
+      debt: state.economy.debt + Math.floor(state.economy.bonds.reduce((s, b) => s + b.amount * 0.1, 0)),
+      bondDefaultRisk: 0,
+    },
+  };
+}
+
 /** Generate all random events for this tick */
 export function generateEvents(state: GameState): [GameState, GameEvent[]] {
   const events: GameEvent[] = [];
@@ -178,6 +236,18 @@ export function generateEvents(state: GameState): [GameState, GameEvent[]] {
   const waterEvt = tryWaterDiscoveryEvent(next);
   if (waterEvt) {
     events.push(waterEvt);
+  }
+
+  const diseaseEvt = tryDiseaseOutbreakEvent(next);
+  if (diseaseEvt) {
+    events.push(diseaseEvt);
+    next = applyDiseaseOutbreak(next);
+  }
+
+  const bondEvt = tryBondDefaultEvent(next);
+  if (bondEvt) {
+    events.push(bondEvt);
+    next = applyBondDefault(next);
   }
 
   return [next, events];
