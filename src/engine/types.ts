@@ -50,6 +50,8 @@ export interface Tile {
   hasRoadAccess: boolean;
   /** Pollution level 0–100 (recomputed each tick) */
   pollution: number;
+  /** Maximum zone level allowed on this tile (1=low, 2=medium, 3=high density) */
+  densityCap: 1 | 2 | 3;
 }
 
 export interface Position {
