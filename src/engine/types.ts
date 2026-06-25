@@ -158,6 +158,19 @@ export interface PixelgramPost {
 
 export type SimulationSpeed = 'pause' | 1 | 2 | 3;
 
+export interface HistorySnapshot {
+  readonly month: number;
+  readonly year: number;
+  readonly population: number;
+  readonly balance: number;
+  readonly happiness: number;
+  readonly income: number;
+  readonly expenses: number;
+  readonly rDemand: number;
+  readonly cDemand: number;
+  readonly iDemand: number;
+}
+
 export interface GameState {
   readonly worldWidth: number;
   readonly worldHeight: number;
@@ -182,6 +195,8 @@ export interface GameState {
   tickCount: number;
   /** True once first road is placed */
   hasInfrastructure: boolean;
+  /** Rolling 24-month history for charts */
+  history: HistorySnapshot[];
 }
 
 /** Command result returned to the UI */

@@ -25,6 +25,7 @@ function makeState(): GameState {
     running: false,
     tickCount: 0,
     hasInfrastructure: false,
+    history: [],
     rciDemand: { r: 50, c: 0, i: 0 },
     milestones: [],
     victory: false,

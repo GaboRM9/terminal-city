@@ -44,7 +44,7 @@ function OutputLine({ entry }: { entry: LogEntry }): JSX.Element {
 }
 
 export function CommandConsole(): JSX.Element {
-  const { state, addLog, saveGame, loadGame, getSavesMeta, undo, toggleLivestats, showLivestats } = useGameStore();
+  const { state, addLog, saveGame, loadGame, getSavesMeta, undo, toggleLivestats, showLivestats, toggleCharts } = useGameStore();
   const [input, setInput] = useState('');
   const [history, setHistory] = useState<string[]>([]);
   const [historyIdx, setHistoryIdx] = useState(-1);
@@ -84,6 +84,12 @@ export function CommandConsole(): JSX.Element {
       return;
     }
 
+    if (msg === '__CHARTS__') {
+      toggleCharts();
+      addLog('Panel de gráficos activado.', 'info', 'system');
+      return;
+    }
+
     if (msg === '__UNDO__') {
       undo();
       return;
@@ -113,7 +119,7 @@ export function CommandConsole(): JSX.Element {
     }
 
     addLog(msg, result.severity, 'command');
-  }, [input, state, addLog, saveGame, loadGame, getSavesMeta, undo, toggleLivestats, showLivestats]);
+  }, [input, state, addLog, saveGame, loadGame, getSavesMeta, undo, toggleLivestats, showLivestats, toggleCharts]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
