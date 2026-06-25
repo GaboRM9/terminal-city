@@ -27,6 +27,10 @@ const T = '#00cc44'; const t = '#006622';                       // park green
 const X = '#ff4444';                                            // demolish red
 const W = '#cccccc'; const w = '#888888';                       // white/light gray
 const M = '#cc8800'; const m = '#664400';                       // mill brown
+const K = '#ff4488'; const k = '#881144';                       // pink (hospital)
+const C = '#44ccff'; const c = '#006688';                       // cyan (school)
+const V = '#aa88ff'; const v = '#553388';                       // violet (university)
+const Z = '#44aa66'; const z = '#1a5533';                       // green (waste plant)
 
 export const PIXEL_ICONS: Record<string, IconGrid> = {
 
@@ -187,6 +191,62 @@ export const PIXEL_ICONS: Record<string, IconGrid> = {
       '.BBBBBB.',
       '..BBBB..',
       '...bb...',
+    ],
+  ),
+
+  hospital: icon(
+    { K, k, W },
+    [
+      '.KKKKKK.',
+      'KK.KK.KK',
+      'KKKKKKKK',
+      'KK.KK.KK',
+      'KKKKKKKK',
+      '.KK..KK.',
+      '.KWWWWK.',
+      '.KKKKKK.',
+    ],
+  ),
+
+  school: icon(
+    { C, c, W },
+    [
+      '...CC...',
+      '..CCCC..',
+      '.CCCCCC.',
+      'CCCCCCCC',
+      'CC.cc.CC',
+      'CC.cc.CC',
+      'CCWWWWCC',
+      'CCCCCCCC',
+    ],
+  ),
+
+  university: icon(
+    { V, v, W, Y: Y },
+    [
+      '.V....V.',
+      'VV.VV.VV',
+      'VVVVVVVV',
+      'VV.VV.VV',
+      'VVVVVVVV',
+      'VV.YY.VV',
+      'VVVVVVVV',
+      'vvvvvvvv',
+    ],
+  ),
+
+  waste_plant: icon(
+    { Z, z, W },
+    [
+      '..zz.zz.',
+      '..ZZ.ZZ.',
+      '..ZZZZ..',
+      '.ZZZZZZ.',
+      'ZZZZZZZZ',
+      'ZZ.WW.ZZ',
+      'ZZZZZZZZ',
+      'zzzzzzzz',
     ],
   ),
 

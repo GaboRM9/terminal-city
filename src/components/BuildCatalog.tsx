@@ -47,6 +47,10 @@ const CATEGORIES: Category[] = [
       { tool: 'water_pump', label: 'Bomba de Agua', cost: 2000 },
       { tool: 'fire_station', label: 'Bomberos', cost: 1000 },
       { tool: 'police_station', label: 'Policía', cost: 1200 },
+      { tool: 'hospital', label: 'Hospital', cost: 3000 },
+      { tool: 'school', label: 'Escuela', cost: 1500 },
+      { tool: 'university', label: 'Universidad', cost: 8000 },
+      { tool: 'waste_plant', label: 'Planta Residuos', cost: 4000 },
     ],
   },
   {

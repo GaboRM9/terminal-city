@@ -15,14 +15,18 @@ export type ZoneType =
   | 'police_station'
   | 'power_plant'
   | 'water_pump'
+  | 'hospital'
+  | 'school'
+  | 'university'
   | 'granary'
   | 'mill'
   | 'bakery'
   | 'iron_mine'
   | 'foundry'
-  | 'tools_workshop';
+  | 'tools_workshop'
+  | 'waste_plant';
 
-export type ServiceType = 'water' | 'electricity' | 'garbage' | 'police' | 'fire' | 'education';
+export type ServiceType = 'water' | 'electricity' | 'garbage' | 'police' | 'fire' | 'education' | 'health';
 
 export type ProductionTier = 1 | 2 | 3;
 
@@ -44,6 +48,8 @@ export interface Tile {
   damaged: boolean;
   /** Road connectivity flag */
   hasRoadAccess: boolean;
+  /** Pollution level 0–100 (recomputed each tick) */
+  pollution: number;
 }
 
 export interface Position {
@@ -74,6 +80,18 @@ export interface ProductionChainState {
   nodes: ProductionNode[];
 }
 
+export type BondRating = 'AAA' | 'AA' | 'A' | 'BBB' | 'B' | 'D';
+
+export interface Bond {
+  readonly id: string;
+  readonly amount: number;
+  readonly termMonths: number;
+  monthsRemaining: number;
+  readonly monthlyPayment: number;
+  readonly interestRate: number;
+  readonly rating: BondRating;
+}
+
 export interface EconomyState {
   balance: number;
   debt: number;
@@ -84,6 +102,9 @@ export interface EconomyState {
   /** Tax rate 5–30 */
   taxRate: number;
   serviceBudgets: ServiceBudget[];
+  bonds: Bond[];
+  /** Consecutive months with negative net cashflow while bonds are active */
+  bondDefaultRisk: number;
 }
 
 export type EventSeverity = 'info' | 'warning' | 'critical';
@@ -140,6 +161,19 @@ export interface PixelgramPost {
 
 export type SimulationSpeed = 'pause' | 1 | 2 | 3;
 
+export interface HistorySnapshot {
+  readonly month: number;
+  readonly year: number;
+  readonly population: number;
+  readonly balance: number;
+  readonly happiness: number;
+  readonly income: number;
+  readonly expenses: number;
+  readonly rDemand: number;
+  readonly cDemand: number;
+  readonly iDemand: number;
+}
+
 export interface GameState {
   readonly worldWidth: number;
   readonly worldHeight: number;
@@ -164,6 +198,10 @@ export interface GameState {
   tickCount: number;
   /** True once first road is placed */
   hasInfrastructure: boolean;
+  /** Rolling 24-month history for charts */
+  history: HistorySnapshot[];
+  /** City-wide average pollution (0–100), recomputed each tick */
+  avgPollution: number;
 }
 
 /** Command result returned to the UI */
