@@ -34,6 +34,7 @@ export const BALANCE = {
   recessionCheckInterval: 120, // ticks (~10 years)
   recessionProbability: 0.08,
   waterDiscoveryProbability: 0.01,
+  diseaseOutbreakProbability: 0.03,
   crimePenaltyHappiness: 5,
 
   // Limits

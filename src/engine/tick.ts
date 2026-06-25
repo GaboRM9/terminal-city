@@ -1,6 +1,6 @@
 import type { GameState, LogEntry } from './types';
 import { refreshCoverage } from './services';
-import { applyMonthlyEconomics, computeHappiness } from './economy';
+import { applyMonthlyEconomics, computeHappiness, processBondPayments } from './economy';
 import { evaluateProductionChains, isTierUnlocked } from './production';
 import { generateEvents } from './events';
 import { computeTotalPopulation } from './world';
@@ -59,10 +59,17 @@ function updatePopulation(state: GameState): GameState {
         (tile.coverage.garbage ? 1 : 0) +
         (tile.coverage.police ? 1 : 0) +
         (tile.coverage.fire ? 1 : 0) +
-        (tile.coverage.education ? 1 : 0);
+        (tile.coverage.education ? 1 : 0) +
+        (tile.coverage.health ? 1 : 0);
+
+      // Without health (hospital) coverage, residential zones can't exceed level 2
+      const hasHealthCoverage = !!(tile.coverage.health);
+      const effectiveMaxTier = (tile.type === 'residential' && !hasHealthCoverage)
+        ? Math.min(maxTier, 2)
+        : maxTier;
 
       const maxPop = tile.zoneLevel * BALANCE.populationPerZoneLevel;
-      const canGrow = tile.zoneLevel < maxTier && tile.zoneLevel < 3 && serviceScore >= 3;
+      const canGrow = tile.zoneLevel < effectiveMaxTier && tile.zoneLevel < 3 && serviceScore >= 3;
 
       // Demand multiplier: high demand = faster growth, low = slower
       const demand = state.rciDemand;
@@ -75,7 +82,7 @@ function updatePopulation(state: GameState): GameState {
       let growth = 0;
       if (serviceScore >= 2) {
         growth = Math.floor(
-          BALANCE.basePopGrowth * (serviceScore / 6) * (state.happiness / 100) * demandFactor,
+          BALANCE.basePopGrowth * (serviceScore / 7) * (state.happiness / 100) * demandFactor,
         );
         if (migrationBoost) growth = Math.floor(growth * 1.5);
       } else if (serviceScore === 0) {
@@ -142,6 +149,7 @@ export function tick(state: GameState): GameState {
 
   // 6. Apply monthly economics
   next = applyMonthlyEconomics(next);
+  next = processBondPayments(next);
 
   // 7. Compute total population
   const population = computeTotalPopulation(next);
