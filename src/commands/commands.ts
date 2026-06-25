@@ -27,6 +27,7 @@ const VALID_ZONES = new Set<ZoneType>([
 
 const VALID_BUILDINGS = new Set<ZoneType>([
   'fire_station', 'police_station', 'power_plant', 'water_pump',
+  'hospital', 'school', 'university',
   'granary', 'mill', 'bakery', 'iron_mine', 'foundry', 'tools_workshop',
 ]);
 
@@ -275,26 +276,55 @@ export const COMMANDS: CommandDefinition[] = [
     },
   },
 
-  // ── save ──
+  // ── undo ──
   {
-    name: 'save',
-    aliases: [],
-    description: 'Guarda la partida en localStorage',
-    usage: 'save',
+    name: 'undo',
+    aliases: ['u'],
+    description: 'Deshace la última acción de construcción (hasta 10 niveles)',
+    usage: 'undo',
     execute(_args, state): [GameState, ReturnType<typeof ok>] {
-      // Actual saving is handled by the store; this just returns the signal
-      return [state, { success: true, message: '__SAVE__', severity: 'info' }];
+      return [state, { success: true, message: '__UNDO__', severity: 'info' }];
     },
   },
 
-  // ── load ──
+  // ── save [slot] ──
+  {
+    name: 'save',
+    aliases: [],
+    description: 'Guarda la partida en una ranura (0-2, por defecto 0)',
+    usage: 'save [0|1|2]',
+    execute(args, state): [GameState, ReturnType<typeof ok>] {
+      const slot = args.length > 0 ? parseIntArg(args[0]) : 0;
+      if (slot === null || slot < 0 || slot > 2) {
+        return [state, err('Ranura inválida. Usa: 0, 1 o 2')];
+      }
+      return [state, { success: true, message: `__SAVE_${slot}__`, severity: 'info' }];
+    },
+  },
+
+  // ── load [slot] ──
   {
     name: 'load',
     aliases: [],
-    description: 'Carga la partida guardada',
-    usage: 'load',
+    description: 'Carga la partida desde una ranura (0-2, por defecto 0)',
+    usage: 'load [0|1|2]',
+    execute(args, state): [GameState, ReturnType<typeof ok>] {
+      const slot = args.length > 0 ? parseIntArg(args[0]) : 0;
+      if (slot === null || slot < 0 || slot > 2) {
+        return [state, err('Ranura inválida. Usa: 0, 1 o 2')];
+      }
+      return [state, { success: true, message: `__LOAD_${slot}__`, severity: 'info' }];
+    },
+  },
+
+  // ── saves ──
+  {
+    name: 'saves',
+    aliases: [],
+    description: 'Lista las ranuras de guardado disponibles',
+    usage: 'saves',
     execute(_args, state): [GameState, ReturnType<typeof ok>] {
-      return [state, { success: true, message: '__LOAD__', severity: 'info' }];
+      return [state, { success: true, message: '__SAVES__', severity: 'info' }];
     },
   },
 
