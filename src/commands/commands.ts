@@ -377,6 +377,17 @@ export const COMMANDS: CommandDefinition[] = [
     },
   },
 
+  // ── view charts ──
+  {
+    name: 'view charts',
+    aliases: ['charts'],
+    description: 'Muestra gráficos sparkline de los últimos 24 meses',
+    usage: 'view charts',
+    execute(_args, state): [GameState, ReturnType<typeof ok>] {
+      return [state, { success: true, message: '__CHARTS__', severity: 'info' }];
+    },
+  },
+
   // ── view hitos ──
   {
     name: 'view hitos',

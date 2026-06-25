@@ -202,6 +202,21 @@ export function tick(state: GameState): GameState {
   // 12. Check milestones (may add bonus balance + posts + log entries)
   next = checkMilestones(next);
 
+  // 13. Append history snapshot (keep last 24 months)
+  const snapshot = {
+    month: next.month,
+    year: next.year,
+    population: next.population,
+    balance: next.economy.balance,
+    happiness: next.happiness,
+    income: next.economy.lastIncome,
+    expenses: next.economy.lastExpenses,
+    rDemand: next.rciDemand.r,
+    cDemand: next.rciDemand.c,
+    iDemand: next.rciDemand.i,
+  };
+  next = { ...next, history: [...next.history, snapshot].slice(-24) };
+
   return next;
 }
 

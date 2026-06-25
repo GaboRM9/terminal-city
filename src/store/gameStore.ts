@@ -46,6 +46,7 @@ function createInitialState(): GameState {
     running: false,
     tickCount: 0,
     hasInfrastructure: false,
+    history: [],
   };
 }
 
@@ -68,9 +69,11 @@ interface GameStore {
   buildTool: BuildTool | null;
   roadStart: { x: number; y: number } | null;
 
-  // Pixelgram / livestats toggle
+  // Panel toggle: pixelgram | livestats | charts
   showLivestats: boolean;
+  showCharts: boolean;
   toggleLivestats: () => void;
+  toggleCharts: () => void;
 
   // Simulation control
   startSimulation: () => void;
@@ -122,7 +125,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   buildTool: null,
   roadStart: null,
   showLivestats: false,
-  toggleLivestats: () => set((s) => ({ showLivestats: !s.showLivestats })),
+  showCharts: false,
+  toggleLivestats: () => set((s) => ({ showLivestats: !s.showLivestats, showCharts: false })),
+  toggleCharts: () => set((s) => ({ showCharts: !s.showCharts, showLivestats: false })),
 
   startSimulation: () => {
     const { state } = get();
