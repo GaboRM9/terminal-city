@@ -30,6 +30,7 @@ const M = '#cc8800'; const m = '#664400';                       // mill brown
 const K = '#ff4488'; const k = '#881144';                       // pink (hospital)
 const C = '#44ccff'; const c = '#006688';                       // cyan (school)
 const V = '#aa88ff'; const v = '#553388';                       // violet (university)
+const Z = '#44aa66'; const z = '#1a5533';                       // green (waste plant)
 
 export const PIXEL_ICONS: Record<string, IconGrid> = {
 
@@ -232,6 +233,20 @@ export const PIXEL_ICONS: Record<string, IconGrid> = {
       'VV.YY.VV',
       'VVVVVVVV',
       'vvvvvvvv',
+    ],
+  ),
+
+  waste_plant: icon(
+    { Z, z, W },
+    [
+      '..zz.zz.',
+      '..ZZ.ZZ.',
+      '..ZZZZ..',
+      '.ZZZZZZ.',
+      'ZZZZZZZZ',
+      'ZZ.WW.ZZ',
+      'ZZZZZZZZ',
+      'zzzzzzzz',
     ],
   ),
 

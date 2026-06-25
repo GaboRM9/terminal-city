@@ -47,6 +47,7 @@ function createInitialState(): GameState {
     tickCount: 0,
     hasInfrastructure: false,
     history: [],
+    avgPollution: 0,
   };
 }
 

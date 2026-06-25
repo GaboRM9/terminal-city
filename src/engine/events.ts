@@ -179,6 +179,25 @@ export function applyRecession(state: GameState): GameState {
   };
 }
 
+/** Smog warning when city-wide average pollution exceeds threshold */
+function trySmogWarningEvent(state: GameState): GameEvent | null {
+  if (state.avgPollution < 60) return null;
+  // Only fire once every 6 months to avoid spam
+  if (state.tickCount % 6 !== 0) return null;
+
+  return makeEvent(
+    state.year,
+    state.month,
+    `¡Alerta de smog! Contaminación promedio: ${state.avgPollution}/100. La salud de los ciudadanos está en riesgo. Construye parques o una planta de residuos.`,
+    'critical',
+  );
+}
+
+/** Apply smog: happiness penalty citywide */
+export function applySmogWarning(state: GameState): GameState {
+  return { ...state, happiness: Math.max(0, state.happiness - 10) };
+}
+
 /** Bond default crisis: 3+ months of negative cashflow while bonds are active */
 function tryBondDefaultEvent(state: GameState): GameEvent | null {
   if (state.economy.bonds.length === 0) return null;
@@ -248,6 +267,12 @@ export function generateEvents(state: GameState): [GameState, GameEvent[]] {
   if (bondEvt) {
     events.push(bondEvt);
     next = applyBondDefault(next);
+  }
+
+  const smogEvt = trySmogWarningEvent(next);
+  if (smogEvt) {
+    events.push(smogEvt);
+    next = applySmogWarning(next);
   }
 
   return [next, events];

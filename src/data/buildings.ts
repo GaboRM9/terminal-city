@@ -149,6 +149,15 @@ export const BUILDINGS: BuildingDefinition[] = [
     maxZoneLevel: 0,
   },
   {
+    type: 'waste_plant',
+    name: 'Planta de Residuos',
+    char: 'Z',
+    color: '#44aa66',
+    cost: 4000,
+    maintenanceCost: 200,
+    maxZoneLevel: 0,
+  },
+  {
     type: 'granary',
     name: 'Granero',
     char: 'G',

@@ -1,6 +1,7 @@
 import type { Bond, BondRating, EconomyState, GameState, ServiceType, Tile } from './types';
 import { BALANCE } from '../data/balanceConfig';
 import { BUILDINGS } from '../data/buildings';
+import { pollutionHappinessPenalty } from './pollution';
 
 // ─────────────────────────────────────────────
 //  Economy calculations — all pure functions
@@ -104,6 +105,8 @@ export function computeHappiness(state: GameState): number {
     for (const service of services) {
       if (tile.coverage[service]) score += 10;
     }
+    // Pollution penalty (hospital halves it)
+    score -= pollutionHappinessPenalty(tile.pollution ?? 0, !!(tile.coverage.health));
     // Debt penalty
     if (state.economy.debt > 10000) score -= 10;
     // Tax penalty
