@@ -15,6 +15,9 @@ export type ZoneType =
   | 'police_station'
   | 'power_plant'
   | 'water_pump'
+  | 'hospital'
+  | 'school'
+  | 'university'
   | 'granary'
   | 'mill'
   | 'bakery'
@@ -22,7 +25,7 @@ export type ZoneType =
   | 'foundry'
   | 'tools_workshop';
 
-export type ServiceType = 'water' | 'electricity' | 'garbage' | 'police' | 'fire' | 'education';
+export type ServiceType = 'water' | 'electricity' | 'garbage' | 'police' | 'fire' | 'education' | 'health';
 
 export type ProductionTier = 1 | 2 | 3;
 
