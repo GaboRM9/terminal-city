@@ -179,6 +179,32 @@ export function applyRecession(state: GameState): GameState {
   };
 }
 
+/** Bond default crisis: 3+ months of negative cashflow while bonds are active */
+function tryBondDefaultEvent(state: GameState): GameEvent | null {
+  if (state.economy.bonds.length === 0) return null;
+  if (state.economy.bondDefaultRisk < 3) return null;
+
+  return makeEvent(
+    state.year,
+    state.month,
+    `¡CRISIS DE BONOS! La ciudad lleva ${state.economy.bondDefaultRisk} meses sin poder cubrir los pagos. Calificación crediticia en riesgo.`,
+    'critical',
+  );
+}
+
+/** Apply bond default: happiness crash and debt spike */
+export function applyBondDefault(state: GameState): GameState {
+  return {
+    ...state,
+    happiness: Math.max(0, state.happiness - 15),
+    economy: {
+      ...state.economy,
+      debt: state.economy.debt + Math.floor(state.economy.bonds.reduce((s, b) => s + b.amount * 0.1, 0)),
+      bondDefaultRisk: 0,
+    },
+  };
+}
+
 /** Generate all random events for this tick */
 export function generateEvents(state: GameState): [GameState, GameEvent[]] {
   const events: GameEvent[] = [];
@@ -216,6 +242,12 @@ export function generateEvents(state: GameState): [GameState, GameEvent[]] {
   if (diseaseEvt) {
     events.push(diseaseEvt);
     next = applyDiseaseOutbreak(next);
+  }
+
+  const bondEvt = tryBondDefaultEvent(next);
+  if (bondEvt) {
+    events.push(bondEvt);
+    next = applyBondDefault(next);
   }
 
   return [next, events];

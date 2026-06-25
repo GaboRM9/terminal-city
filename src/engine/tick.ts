@@ -1,6 +1,6 @@
 import type { GameState, LogEntry } from './types';
 import { refreshCoverage } from './services';
-import { applyMonthlyEconomics, computeHappiness } from './economy';
+import { applyMonthlyEconomics, computeHappiness, processBondPayments } from './economy';
 import { evaluateProductionChains, isTierUnlocked } from './production';
 import { generateEvents } from './events';
 import { computeTotalPopulation } from './world';
@@ -149,6 +149,7 @@ export function tick(state: GameState): GameState {
 
   // 6. Apply monthly economics
   next = applyMonthlyEconomics(next);
+  next = processBondPayments(next);
 
   // 7. Compute total population
   const population = computeTotalPopulation(next);
