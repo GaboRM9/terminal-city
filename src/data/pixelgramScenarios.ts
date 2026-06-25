@@ -478,6 +478,76 @@ export const SCENARIOS: PostScenario[] = [
     ],
   },
 
+  // ── No hospital / health risk ────────────────────────────────
+  {
+    id: 'no_hospital',
+    condition: (s) =>
+      s.population > 20 &&
+      !s.tiles.some((t) => t.type === 'hospital'),
+    weight: 5,
+    personalities: ['pessimist', 'political', 'neutral'],
+    templates: [
+      t('Me corté cocinando. Fui al "centro médico". Era una carpa con aspirinas. ¿Tenemos hospital? Pregunta seria'),
+      t('Ciudad sin hospital = ciudad que apuesta a que nadie se enferme. Estrategia audaz, no lo negaré'),
+      t('Mi abuela necesita atención médica. Lo más cercano es a 3 horas. Esto no es una ciudad, es un campamento'),
+      t('¿Cuándo construimos el hospital? Mientras el alcalde piensa, yo me vacuno con lo que consigo 💉'),
+      t('Sin cobertura sanitaria los más vulnerables sufren primero. No es política, es matemática básica'),
+      t('Hilo: por qué una ciudad sin hospital no es ciudad. Respuesta corta: porque la gente se muere más fácil'),
+    ],
+  },
+
+  // ── Disease outbreak event ────────────────────────────────────
+  {
+    id: 'disease_outbreak',
+    condition: (s) =>
+      s.eventLog.some(
+        (e) => e.message.includes('Brote de enfermedad') &&
+               e.year === s.year && Math.abs(e.month - s.month) <= 3,
+      ),
+    weight: 9,
+    personalities: ['pessimist', 'political', 'neutral', 'funny'],
+    templates: [
+      t('¡BROTE CONFIRMADO! Vecinos enfermos, sin hospital, sin plan. Esto es lo que pasa cuando ignoramos la sanidad 😷'),
+      t('Llevo tres días con fiebre. El "médico" del barrio es el señor que estudió enfermería en 1987. Dios nos cuide'),
+      t('El brote empezó en mi calle. Cinco vecinos con síntomas. La alcaldía mandó... un comunicado. Gracias'),
+      t('Epidemia en curso. Nota al alcalde: un hospital no es un gasto, es una inversión en no morirnos todos'),
+      t('Mi barrio parece escena de película apocalíptica. Todos tosiendo, nadie sabe qué hacer 🤒'),
+      t('Antes del brote decíamos "algún día construiremos el hospital". Ese día era hoy. Tarde nos damos cuenta'),
+      t('Positivo de la situación: por fin el alcalde mencionó la palabra "sanidad". Progreso, supongo 🙄'),
+    ],
+  },
+
+  // ── Hospital exists ────────────────────────────────────────────
+  {
+    id: 'has_hospital',
+    condition: (s) => s.tiles.some((t) => t.type === 'hospital'),
+    weight: 3,
+    personalities: ['optimist', 'neutral'],
+    templates: [
+      t('¡Inauguraron el hospital! 🏥 Primera vez en la historia de esta ciudad que tenemos sanidad real. Emocionada'),
+      t('Fui al hospital nuevo a hacerme un chequeo. El personal es amable, el edificio está limpio. Esto sí'),
+      t('Con hospital la ciudad se siente diferente. Más segura. Como si alguien pensara en nosotros'),
+      t('Mi vecina tuvo el bebé en el hospital nuevo. Los dos están bien. Con el anterior ni nos arriesgamos 👶'),
+      t('Dato: las ciudades con buena sanidad crecen más rápido. Acabamos de dar el paso más importante'),
+    ],
+  },
+
+  // ── School / education ────────────────────────────────────────
+  {
+    id: 'has_school',
+    condition: (s) => s.tiles.some((t) => t.type === 'school' || t.type === 'university'),
+    weight: 3,
+    personalities: ['optimist', 'neutral', 'political'],
+    templates: [
+      t('¡Abren la escuela! 📚 Mis hijos ya tienen donde estudiar. Esta ciudad crece de verdad'),
+      t('Primera clase en la escuela nueva. Los niños del barrio llegaron con mochilas. Imagen que no olvidaré'),
+      t('Con escuela viene educación, con educación viene futuro. Cadena de causalidad que me gusta mucho'),
+      t('La universidad acepta inscripciones. Primera vez que no tengo que salir de la ciudad para estudiar 🎓'),
+      t('Inversión en educación = inversión en la próxima generación. Gracias a quien tomó esa decisión'),
+      t('Fui de visita a la escuela. Los niños aprendiendo, los maestros motivados. Así se construye una ciudad 📖'),
+    ],
+  },
+
   // ── Water discovery event ────────────────────────────────────
   {
     id: 'water_discovery',

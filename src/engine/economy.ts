@@ -96,16 +96,14 @@ export function computeHappiness(state: GameState): number {
 
   if (coveredTiles.length === 0) return 50;
 
-  const services: ServiceType[] = ['water', 'electricity', 'garbage', 'police', 'fire'];
+  const services: ServiceType[] = ['water', 'electricity', 'garbage', 'police', 'fire', 'education', 'health'];
   let totalScore = 0;
 
   for (const tile of coveredTiles) {
-    let score = 40; // base happiness
+    let score = 30; // base happiness (lower now that 7 services can add 70)
     for (const service of services) {
       if (tile.coverage[service]) score += 10;
     }
-    // Park proximity bonus
-    if (tile.coverage['fire']) score += 2;
     // Debt penalty
     if (state.economy.debt > 10000) score -= 10;
     // Tax penalty
@@ -141,7 +139,7 @@ export function setServiceBudget(
 
 /** Create the default economy state */
 export function createDefaultEconomy(): EconomyState {
-  const services: ServiceType[] = ['water', 'electricity', 'garbage', 'police', 'fire', 'education'];
+  const services: ServiceType[] = ['water', 'electricity', 'garbage', 'police', 'fire', 'education', 'health'];
   return {
     balance: BALANCE.startingBalance,
     debt: 0,
