@@ -77,6 +77,18 @@ export interface ProductionChainState {
   nodes: ProductionNode[];
 }
 
+export type BondRating = 'AAA' | 'AA' | 'A' | 'BBB' | 'B' | 'D';
+
+export interface Bond {
+  readonly id: string;
+  readonly amount: number;
+  readonly termMonths: number;
+  monthsRemaining: number;
+  readonly monthlyPayment: number;
+  readonly interestRate: number;
+  readonly rating: BondRating;
+}
+
 export interface EconomyState {
   balance: number;
   debt: number;
@@ -87,6 +99,9 @@ export interface EconomyState {
   /** Tax rate 5–30 */
   taxRate: number;
   serviceBudgets: ServiceBudget[];
+  bonds: Bond[];
+  /** Consecutive months with negative net cashflow while bonds are active */
+  bondDefaultRisk: number;
 }
 
 export type EventSeverity = 'info' | 'warning' | 'critical';

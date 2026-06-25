@@ -1,7 +1,7 @@
 import type { CommandDefinition, GameState, ServiceType, ZoneType } from '../engine/types';
 import { parseCoords, parseIntArg } from './parser';
 import { zoneTile, demolishTile, traceRoad, recalculateRoadAccess } from '../engine/world';
-import { setTaxRate, setServiceBudget } from '../engine/economy';
+import { setTaxRate, setServiceBudget, issueBond, computeBondRating } from '../engine/economy';
 import { tick } from '../engine/tick';
 import { BUILDINGS } from '../data/buildings';
 import { TILE_LEGEND } from '../renderer/asciiMap';
@@ -212,6 +212,9 @@ export const COMMANDS: CommandDefinition[] = [
         .join('\n');
 
       const { rciDemand: d } = state;
+      const rating = computeBondRating(state);
+      const bondPayments = state.economy.bonds.reduce((s, b) => s + b.monthlyPayment, 0);
+
       const msg = [
         `=== ESTADÍSTICAS DE LA CIUDAD ===`,
         `Año ${state.year}, Mes ${state.month}`,
@@ -222,6 +225,8 @@ export const COMMANDS: CommandDefinition[] = [
         `Impuesto: ${state.economy.taxRate}%`,
         `Ingresos (último mes): $${state.economy.lastIncome}`,
         `Gastos (último mes): $${state.economy.lastExpenses}`,
+        `Bonos activos: ${state.economy.bonds.length} (pago mensual: $${bondPayments})`,
+        `Calificación crediticia: ${rating}`,
         `--- Demanda RCI ---`,
         `  R (residencial): ${d.r}% — ${demandLabel(d.r)}`,
         `  C (comercial):   ${d.c}% — ${demandLabel(d.c)}`,
@@ -325,6 +330,50 @@ export const COMMANDS: CommandDefinition[] = [
     usage: 'saves',
     execute(_args, state): [GameState, ReturnType<typeof ok>] {
       return [state, { success: true, message: '__SAVES__', severity: 'info' }];
+    },
+  },
+
+  // ── bond <amount> ──
+  {
+    name: 'bond',
+    aliases: ['bono'],
+    description: 'Emite un bono municipal para financiar infraestructura (20 años)',
+    usage: 'bond <monto>',
+    execute(args, state): [GameState, ReturnType<typeof ok>] {
+      if (args.length < 1) return [state, err('Uso: bond <monto>')];
+      const amount = parseIntArg(args[0]);
+      if (amount === null || amount <= 0) return [state, err('El monto debe ser un número positivo.')];
+      const [next, message] = issueBond(state, amount);
+      return [next, next === state ? err(message) : ok(message)];
+    },
+  },
+
+  // ── view bonds ──
+  {
+    name: 'view bonds',
+    aliases: ['bonds', 'bonos'],
+    description: 'Muestra bonos activos y calificación crediticia',
+    usage: 'view bonds',
+    execute(_args, state): [GameState, ReturnType<typeof ok>] {
+      const rating = computeBondRating(state);
+      const { bonds } = state.economy;
+      const totalMonthly = bonds.reduce((s, b) => s + b.monthlyPayment, 0);
+
+      const bondLines = bonds.length === 0
+        ? ['  (sin bonos activos)']
+        : bonds.map((b) =>
+            `  $${b.amount} al ${(b.interestRate * 100).toFixed(0)}% — $${b.monthlyPayment}/mes — ${b.monthsRemaining} meses restantes`,
+          );
+
+      const msg = [
+        '=== BONOS MUNICIPALES ===',
+        `Calificación crediticia: ${rating}`,
+        `Pago mensual total: $${totalMonthly}`,
+        `Bonos activos: ${bonds.length}`,
+        ...bondLines,
+      ].join('\n');
+
+      return [state, ok(msg)];
     },
   },
 
