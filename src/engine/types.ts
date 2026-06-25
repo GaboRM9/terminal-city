@@ -23,7 +23,8 @@ export type ZoneType =
   | 'bakery'
   | 'iron_mine'
   | 'foundry'
-  | 'tools_workshop';
+  | 'tools_workshop'
+  | 'waste_plant';
 
 export type ServiceType = 'water' | 'electricity' | 'garbage' | 'police' | 'fire' | 'education' | 'health';
 
@@ -47,6 +48,8 @@ export interface Tile {
   damaged: boolean;
   /** Road connectivity flag */
   hasRoadAccess: boolean;
+  /** Pollution level 0–100 (recomputed each tick) */
+  pollution: number;
 }
 
 export interface Position {
@@ -197,6 +200,8 @@ export interface GameState {
   hasInfrastructure: boolean;
   /** Rolling 24-month history for charts */
   history: HistorySnapshot[];
+  /** City-wide average pollution (0–100), recomputed each tick */
+  avgPollution: number;
 }
 
 /** Command result returned to the UI */

@@ -1,6 +1,7 @@
 import type { GameState, LogEntry } from './types';
 import { refreshCoverage } from './services';
 import { applyMonthlyEconomics, computeHappiness, processBondPayments } from './economy';
+import { computePollution, pollutionPopCapMultiplier } from './pollution';
 import { evaluateProductionChains, isTierUnlocked } from './production';
 import { generateEvents } from './events';
 import { computeTotalPopulation } from './world';
@@ -68,8 +69,9 @@ function updatePopulation(state: GameState): GameState {
         ? Math.min(maxTier, 2)
         : maxTier;
 
-      const maxPop = tile.zoneLevel * BALANCE.populationPerZoneLevel;
-      const canGrow = tile.zoneLevel < effectiveMaxTier && tile.zoneLevel < 3 && serviceScore >= 3;
+      const pollutionCapMult = pollutionPopCapMultiplier(tile.pollution ?? 0);
+      const maxPop = Math.floor(tile.zoneLevel * BALANCE.populationPerZoneLevel * pollutionCapMult);
+      const canGrow = tile.zoneLevel < effectiveMaxTier && tile.zoneLevel < 3 && serviceScore >= 3 && (tile.pollution ?? 0) < 80;
 
       // Demand multiplier: high demand = faster growth, low = slower
       const demand = state.rciDemand;
@@ -133,6 +135,9 @@ export function tick(state: GameState): GameState {
 
   // 2. Recalculate service coverage
   next = refreshCoverage(next);
+
+  // 2b. Recompute pollution (uses updated tile types)
+  next = computePollution(next);
 
   // 3. Evaluate production chains
   next = evaluateProductionChains(next);

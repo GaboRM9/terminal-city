@@ -2,6 +2,7 @@ import type { CommandDefinition, GameState, ServiceType, ZoneType } from '../eng
 import { parseCoords, parseIntArg } from './parser';
 import { zoneTile, demolishTile, traceRoad, recalculateRoadAccess } from '../engine/world';
 import { setTaxRate, setServiceBudget, issueBond, computeBondRating } from '../engine/economy';
+import { pollutionLabel } from '../engine/pollution';
 import { tick } from '../engine/tick';
 import { BUILDINGS } from '../data/buildings';
 import { TILE_LEGEND } from '../renderer/asciiMap';
@@ -27,7 +28,7 @@ const VALID_ZONES = new Set<ZoneType>([
 
 const VALID_BUILDINGS = new Set<ZoneType>([
   'fire_station', 'police_station', 'power_plant', 'water_pump',
-  'hospital', 'school', 'university',
+  'hospital', 'school', 'university', 'waste_plant',
   'granary', 'mill', 'bakery', 'iron_mine', 'foundry', 'tools_workshop',
 ]);
 
@@ -227,6 +228,7 @@ export const COMMANDS: CommandDefinition[] = [
         `Gastos (último mes): $${state.economy.lastExpenses}`,
         `Bonos activos: ${state.economy.bonds.length} (pago mensual: $${bondPayments})`,
         `Calificación crediticia: ${rating}`,
+        `Contaminación promedio: ${state.avgPollution}/100 — ${pollutionLabel(state.avgPollution)}`,
         `--- Demanda RCI ---`,
         `  R (residencial): ${d.r}% — ${demandLabel(d.r)}`,
         `  C (comercial):   ${d.c}% — ${demandLabel(d.c)}`,
@@ -371,6 +373,42 @@ export const COMMANDS: CommandDefinition[] = [
         `Pago mensual total: $${totalMonthly}`,
         `Bonos activos: ${bonds.length}`,
         ...bondLines,
+      ].join('\n');
+
+      return [state, ok(msg)];
+    },
+  },
+
+  // ── view pollution ──
+  {
+    name: 'view pollution',
+    aliases: ['pollution', 'smog'],
+    description: 'Muestra niveles de contaminación por zona',
+    usage: 'view pollution',
+    execute(_args, state): [GameState, ReturnType<typeof ok>] {
+      const avg = state.avgPollution;
+      const worst = [...state.tiles]
+        .filter((t) => t.type === 'residential' || t.type === 'commercial')
+        .sort((a, b) => b.pollution - a.pollution)
+        .slice(0, 5);
+
+      const worstLines = worst.length === 0
+        ? ['  (sin zonas habitadas)']
+        : worst.map((t) => `  (${t.x},${t.y}) ${t.type}: ${t.pollution} — ${pollutionLabel(t.pollution)}`);
+
+      const emitters = state.tiles.filter((t) =>
+        ['industrial', 'power_plant', 'foundry', 'iron_mine'].includes(t.type)
+      ).length;
+      const reducers = state.tiles.filter((t) =>
+        ['park', 'waste_plant'].includes(t.type)
+      ).length;
+
+      const msg = [
+        '=== CONTAMINACIÓN URBANA ===',
+        `Promedio ciudad: ${avg}/100 — ${pollutionLabel(avg)}`,
+        `Fuentes activas: ${emitters} · Reductores: ${reducers}`,
+        '--- Zonas más afectadas ---',
+        ...worstLines,
       ].join('\n');
 
       return [state, ok(msg)];

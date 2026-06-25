@@ -184,6 +184,14 @@ function drawFrame(
 
       ctx.fillStyle = color;
       ctx.fillText(char, px + TILE_SIZE / 2, py + TILE_SIZE / 2 + 1);
+
+      // Pollution overlay — orange tint proportional to pollution level
+      const pol = tile.pollution ?? 0;
+      if (pol > 10) {
+        const alpha = Math.min(0.55, (pol - 10) / 120);
+        ctx.fillStyle = `rgba(255, 100, 0, ${alpha.toFixed(3)})`;
+        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+      }
     }
   }
 

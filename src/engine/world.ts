@@ -16,6 +16,7 @@ function makeTile(x: number, y: number): Tile {
     variant: '.',
     damaged: false,
     hasRoadAccess: false,
+    pollution: 0,
   };
 }
 

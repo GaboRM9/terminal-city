@@ -50,6 +50,7 @@ const CATEGORIES: Category[] = [
       { tool: 'hospital', label: 'Hospital', cost: 3000 },
       { tool: 'school', label: 'Escuela', cost: 1500 },
       { tool: 'university', label: 'Universidad', cost: 8000 },
+      { tool: 'waste_plant', label: 'Planta Residuos', cost: 4000 },
     ],
   },
   {

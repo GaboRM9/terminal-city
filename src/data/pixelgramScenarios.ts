@@ -548,6 +548,56 @@ export const SCENARIOS: PostScenario[] = [
     ],
   },
 
+  // ── High pollution / industrial smog ─────────────────────────
+  {
+    id: 'high_pollution',
+    condition: (s) => s.avgPollution > 50,
+    weight: 6,
+    personalities: ['pessimist', 'political', 'neutral'],
+    templates: [
+      tf((s) => `Contaminación urbana en ${s.avgPollution}/100. Esto ya no es un problema menor, es una emergencia de salud pública 😷`),
+      t('Abro la ventana y huele a fábrica. Cierro la ventana y huele a fábrica adentro. Hay que hacer algo'),
+      t('El aire de esta ciudad me está enfermando literalmente. Datos > opiniones: ve la calidad del aire #SmogCity'),
+      t('¿Saben qué tienen en común los vecinos de mi calle? Todos tosemos. Todos. El alcalde no tose, él vive lejos'),
+      t('Mis plantas de interior murieron. MIS PLANTAS DE INTERIOR. El aire exterior las mató desde adentro'),
+      t('Propongo que el alcalde visite el barrio industrial un día. Sin mascarilla. Que respire lo que respiramos 🏭'),
+    ],
+  },
+
+  // ── Clean city ────────────────────────────────────────────────
+  {
+    id: 'clean_city',
+    condition: (s) => s.avgPollution < 10 && s.tiles.some((t) => t.type === 'industrial'),
+    weight: 3,
+    personalities: ['optimist', 'neutral'],
+    templates: [
+      t('Hay industria pero el aire está limpio. Esto es lo que pasa cuando la planificación urbana funciona 🌿'),
+      t('Respiré hondo esta mañana. Huele a... nada. Limpio. ¿Cuándo fue la última vez que eso fue posible? Hoy 🍃'),
+      t('Ciudad industrial y cielo azul. No creía que fuera posible aquí. Los parques y la planta de residuos hacen su trabajo'),
+      t('Calidad del aire: excelente. Salud de mis hijos: bien. Esto es lo que exigimos. Que esto dure 💚'),
+    ],
+  },
+
+  // ── Smog event ────────────────────────────────────────────────
+  {
+    id: 'industrial_smog',
+    condition: (s) =>
+      s.eventLog.some(
+        (e) => e.message.includes('smog') &&
+               e.year === s.year && Math.abs(e.month - s.month) <= 2,
+      ),
+    weight: 9,
+    personalities: ['pessimist', 'political', 'neutral', 'funny'],
+    templates: [
+      t('¡ALERTA DE SMOG EMITIDA! Por fin reconocen lo que llevamos meses respirando. Gracias por la confirmación oficial 🙄'),
+      t('Alerta de smog. Mis pulmones ya lo sabían desde enero, pero bueno, que la ciencia también lo diga'),
+      t('El smog llegó al nivel crítico. Puse una foto del cielo: naranja a las 10am. Arte urbano involuntario'),
+      t('Me dijeron que construyeran parques. Me dijeron que era "exagerado". Alerta de smog. Me deben una disculpa 🌳'),
+      t('Smog warning en mi teléfono. Tercer mes seguido. Propongo cambiar el nombre: Ciudad del Smog. Más honesto'),
+      t('Vivo cerca de tres fábricas y cero parques. La alerta de smog me tomó completamente por sorpresa. Totalmente 🙃'),
+    ],
+  },
+
   // ── Water discovery event ────────────────────────────────────
   {
     id: 'water_discovery',
