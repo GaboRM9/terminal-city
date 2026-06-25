@@ -54,12 +54,25 @@ const RESIDENTIAL_COLORS: Record<number, string> = {
   3: '#00ff41',
 };
 
+/** Color hint for empty residential tiles based on density cap */
+const DENSITY_CAP_HINT: Record<number, string> = {
+  1: '#0d1a0d', // low  — barely visible
+  2: '#0d2210', // medium — faint green
+  3: '#0d2e13', // high — slightly more visible
+};
+
 export function getTileRenderConfig(tile: Tile): TileRenderConfig {
   if (tile.damaged) {
     return { char: 'X', color: '#880000' };
   }
 
   if (tile.type === 'residential') {
+    if (tile.zoneLevel === 0) {
+      return {
+        char: tile.variant === '·' ? '·' : tile.variant === '∙' ? '∙' : '.',
+        color: DENSITY_CAP_HINT[tile.densityCap ?? 3] ?? '#1a1a1a',
+      };
+    }
     return {
       char: RESIDENTIAL_DENSITY[tile.zoneLevel] ?? '.',
       color: RESIDENTIAL_COLORS[tile.zoneLevel] ?? '#1a1a1a',

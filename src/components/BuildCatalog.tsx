@@ -3,13 +3,11 @@ import { PixelIcon } from './PixelIcon';
 import { PIXEL_ICONS } from '../data/pixelIcons';
 import { BUILDINGS } from '../data/buildings';
 import { useGameStore } from '../store/gameStore';
-import type { ZoneType } from '../engine/types';
+import type { BuildTool } from '../store/gameStore';
 
 // ─────────────────────────────────────────────
 //  Cities Skylines-style build catalog toolbar
 // ─────────────────────────────────────────────
-
-type BuildTool = ZoneType | 'road' | 'demolish';
 
 interface CatalogItem {
   tool: BuildTool;
@@ -30,12 +28,18 @@ const CATEGORIES: Category[] = [
     label: 'ZONAS',
     icon: '░',
     items: [
-      { tool: 'residential', label: 'Residencial', cost: 50 },
-      { tool: 'commercial', label: 'Comercial', cost: 100 },
-      { tool: 'industrial', label: 'Industrial', cost: 150 },
-      { tool: 'farm', label: 'Granja', cost: 200 },
-      { tool: 'park', label: 'Parque', cost: 300 },
-      { tool: 'empty', label: 'Vaciar', cost: 0 },
+      { tool: 'residential-low',    label: 'Res. Baja',  cost: 50 },
+      { tool: 'residential-medium', label: 'Res. Media', cost: 50 },
+      { tool: 'residential-high',   label: 'Res. Alta',  cost: 50 },
+      { tool: 'commercial-low',     label: 'Com. Baja',  cost: 100 },
+      { tool: 'commercial-medium',  label: 'Com. Media', cost: 100 },
+      { tool: 'commercial-high',    label: 'Com. Alta',  cost: 100 },
+      { tool: 'industrial-light',   label: 'Ind. Ligera',cost: 150 },
+      { tool: 'industrial-medium',  label: 'Ind. Media', cost: 150 },
+      { tool: 'industrial-heavy',   label: 'Ind. Pesada',cost: 150 },
+      { tool: 'farm',  label: 'Granja',  cost: 200 },
+      { tool: 'park',  label: 'Parque',  cost: 300 },
+      { tool: 'empty', label: 'Vaciar',  cost: 0 },
     ],
   },
   {
@@ -97,9 +101,22 @@ interface ItemCardProps {
   onClick: () => void;
 }
 
+const DENSITY_TOOL_BASE: Record<string, string> = {
+  'residential-low': 'residential', 'residential-medium': 'residential', 'residential-high': 'residential',
+  'commercial-low': 'commercial', 'commercial-medium': 'commercial', 'commercial-high': 'commercial',
+  'industrial-light': 'industrial', 'industrial-medium': 'industrial', 'industrial-heavy': 'industrial',
+};
+
+const DENSITY_LABEL_COLOR: Record<string, string> = {
+  'residential-low': '#00aa2b', 'commercial-low': '#cc7700', 'industrial-light': '#cc3300',
+  'residential-medium': '#00cc35', 'commercial-medium': '#ffb000', 'industrial-medium': '#ff6600',
+  'residential-high': '#00ff41', 'commercial-high': '#ffd000', 'industrial-heavy': '#ff8800',
+};
+
 function ItemCard({ item, selected, canAfford, onClick }: ItemCardProps): JSX.Element {
   const [hovered, setHovered] = useState(false);
-  const iconGrid = PIXEL_ICONS[item.tool];
+  const baseZone = DENSITY_TOOL_BASE[item.tool] ?? item.tool;
+  const iconGrid = PIXEL_ICONS[baseZone] ?? PIXEL_ICONS[item.tool];
 
   return (
     <button
@@ -130,32 +147,52 @@ function ItemCard({ item, selected, canAfford, onClick }: ItemCardProps): JSX.El
         transition: 'border-color 0.1s, background 0.1s',
       }}
     >
-      {iconGrid ? (
-        <PixelIcon
-          grid={iconGrid}
-          pixelSize={4}
-          active={selected}
-          dim={!canAfford}
-        />
-      ) : (
-        <div
-          style={{
-            width: 32,
-            height: 32,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 20,
-            color: canAfford ? '#00ff41' : '#333',
-          }}
-        >
-          {item.tool === 'demolish' ? '×' : '?'}
-        </div>
-      )}
+      <div style={{ position: 'relative' }}>
+        {iconGrid ? (
+          <PixelIcon
+            grid={iconGrid}
+            pixelSize={4}
+            active={selected}
+            dim={!canAfford}
+          />
+        ) : (
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 20,
+              color: canAfford ? '#00ff41' : '#333',
+            }}
+          >
+            {item.tool === 'demolish' ? '×' : '?'}
+          </div>
+        )}
+        {DENSITY_TOOL_BASE[item.tool] && (
+          <span style={{
+            position: 'absolute',
+            bottom: 0,
+            right: 0,
+            fontSize: 7,
+            background: '#0d0d0d',
+            color: DENSITY_LABEL_COLOR[item.tool] ?? '#888',
+            padding: '0 2px',
+            lineHeight: 1.4,
+            fontFamily: '"JetBrains Mono", monospace',
+          }}>
+            {item.tool.includes('-low') || item.tool.includes('-light') ? 'L'
+              : item.tool.includes('-high') || item.tool.includes('-heavy') ? 'H' : 'M'}
+          </span>
+        )}
+      </div>
       <span
         style={{
           fontSize: 9,
-          color: selected ? '#00ff41' : canAfford ? '#888' : '#333',
+          color: selected
+            ? (DENSITY_LABEL_COLOR[item.tool] ?? '#00ff41')
+            : canAfford ? '#888' : '#333',
           textAlign: 'center',
           fontFamily: '"JetBrains Mono", monospace',
           maxWidth: 50,
@@ -279,8 +316,9 @@ export function BuildCatalog(): JSX.Element {
         }}
       >
         {category.items.map((item) => {
-          const building = BUILDINGS.find((b) => b.type === item.tool);
-          const cost = building?.cost ?? 0;
+          const baseZone = DENSITY_TOOL_BASE[item.tool] ?? item.tool;
+          const building = BUILDINGS.find((b) => b.type === baseZone);
+          const cost = building?.cost ?? item.cost ?? 0;
           const canAfford = cost === 0 || balance >= cost;
 
           return (

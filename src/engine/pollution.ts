@@ -34,7 +34,10 @@ export function computePollution(state: GameState): GameState {
   for (const tile of state.tiles) {
     const emission = EMITTERS[tile.type];
     if (!emission) continue;
-    const [base, radius] = emission;
+    const [rawBase, radius] = emission;
+    // Industrial density: light(1)=0.5x, medium(2)=1x, heavy(3)=1.5x
+    const densityScale = tile.type === 'industrial' ? (tile.densityCap ?? 3) / 2 : 1;
+    const base = rawBase * densityScale;
 
     for (let dy = -radius; dy <= radius; dy++) {
       for (let dx = -radius; dx <= radius; dx++) {

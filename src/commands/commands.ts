@@ -1,6 +1,6 @@
 import type { CommandDefinition, GameState, ServiceType, ZoneType } from '../engine/types';
 import { parseCoords, parseIntArg } from './parser';
-import { zoneTile, demolishTile, traceRoad, recalculateRoadAccess } from '../engine/world';
+import { zoneTile, demolishTile, traceRoad, recalculateRoadAccess, setTile, getTile } from '../engine/world';
 import { setTaxRate, setServiceBudget, issueBond, computeBondRating } from '../engine/economy';
 import { pollutionLabel } from '../engine/pollution';
 import { tick } from '../engine/tick';
@@ -32,22 +32,39 @@ const VALID_BUILDINGS = new Set<ZoneType>([
   'granary', 'mill', 'bakery', 'iron_mine', 'foundry', 'tools_workshop',
 ]);
 
+// Density alias: "residential-low" → { zone: 'residential', cap: 1 }
+const DENSITY_ALIAS_MAP: Record<string, { zone: ZoneType; cap: 1 | 2 | 3 }> = {
+  'residential-low':    { zone: 'residential', cap: 1 },
+  'residential-medium': { zone: 'residential', cap: 2 },
+  'residential-high':   { zone: 'residential', cap: 3 },
+  'commercial-low':     { zone: 'commercial',  cap: 1 },
+  'commercial-medium':  { zone: 'commercial',  cap: 2 },
+  'commercial-high':    { zone: 'commercial',  cap: 3 },
+  'industrial-light':   { zone: 'industrial',  cap: 1 },
+  'industrial-medium':  { zone: 'industrial',  cap: 2 },
+  'industrial-heavy':   { zone: 'industrial',  cap: 3 },
+};
+
 export const COMMANDS: CommandDefinition[] = [
-  // ── zone <x> <y> <type> ──
+  // ── zone <x> <y> <type[-density]> ──
   {
     name: 'zone',
     aliases: ['z'],
     description: 'Zonifica un tile del mapa',
-    usage: 'zone <x> <y> <residential|commercial|industrial|farm|park|empty>',
+    usage: 'zone <x> <y> <tipo[-densidad]>  ej: zone 5 3 residential-high',
     execute(args, state): [GameState, ReturnType<typeof ok>] {
       if (args.length < 3) return [state, err('Uso: zone <x> <y> <tipo>')];
 
       const coords = parseCoords(args[0], args[1], state.worldWidth, state.worldHeight);
       if (!coords) return [state, err(`Coordenadas inválidas: ${args[0]},${args[1]}`)];
 
-      const zoneType = args[2].toLowerCase() as ZoneType;
+      const raw = args[2].toLowerCase();
+      const densityAlias = DENSITY_ALIAS_MAP[raw];
+      const zoneType = densityAlias ? densityAlias.zone : (raw as ZoneType);
+      const densityCap = densityAlias?.cap;
+
       if (!VALID_ZONES.has(zoneType)) {
-        return [state, err(`Tipo de zona inválido: "${zoneType}". Usa: ${[...VALID_ZONES].join(', ')}`)];
+        return [state, err(`Tipo de zona inválido: "${raw}". Usa: ${[...VALID_ZONES].join(', ')} (o con sufijo -low/-medium/-high)`)];
       }
 
       const building = BUILDINGS.find((b) => b.type === zoneType);
@@ -56,12 +73,41 @@ export const COMMANDS: CommandDefinition[] = [
         return [state, err(`Fondos insuficientes. Necesitas $${cost}, tienes $${state.economy.balance}.`)];
       }
 
-      let next = zoneTile(state, coords.x, coords.y, zoneType);
+      let next = zoneTile(state, coords.x, coords.y, zoneType, densityCap);
       if (cost > 0) {
         next = { ...next, economy: { ...next.economy, balance: next.economy.balance - cost } };
       }
       next = recalculateRoadAccess(next);
-      return [next, ok(`Zona "${zoneType}" establecida en (${coords.x},${coords.y}). -$${cost}`)];
+      const densityNote = densityCap ? ` [densidad: ${densityCap === 1 ? 'baja' : densityCap === 2 ? 'media' : 'alta'}]` : '';
+      return [next, ok(`Zona "${zoneType}" establecida en (${coords.x},${coords.y}). -$${cost}${densityNote}`)];
+    },
+  },
+
+  // ── density <x> <y> <low|medium|high> ──
+  {
+    name: 'density',
+    aliases: ['den'],
+    description: 'Cambia el cap de densidad de una zona existente sin rezonificar',
+    usage: 'density <x> <y> <low|medium|high>',
+    execute(args, state): [GameState, ReturnType<typeof ok>] {
+      if (args.length < 3) return [state, err('Uso: density <x> <y> <low|medium|high>')];
+
+      const coords = parseCoords(args[0], args[1], state.worldWidth, state.worldHeight);
+      if (!coords) return [state, err(`Coordenadas inválidas: ${args[0]},${args[1]}`)];
+
+      const tile = getTile(state, coords.x, coords.y);
+      if (!tile) return [state, err('Coordenadas fuera del mapa')];
+      if (!VALID_ZONES.has(tile.type) || tile.type === 'empty' || tile.type === 'farm' || tile.type === 'park') {
+        return [state, err(`Solo puedes cambiar la densidad de zonas residenciales, comerciales o industriales. Tipo actual: ${tile.type}`)];
+      }
+
+      const capMap: Record<string, 1 | 2 | 3> = { low: 1, medium: 2, high: 3, baja: 1, media: 2, alta: 3 };
+      const cap = capMap[args[2].toLowerCase()];
+      if (!cap) return [state, err('Densidad inválida. Usa: low, medium o high (o baja, media, alta)')];
+
+      const next = setTile(state, coords.x, coords.y, { densityCap: cap });
+      const labels: Record<number, string> = { 1: 'baja', 2: 'media', 3: 'alta' };
+      return [next, ok(`Densidad de (${coords.x},${coords.y}) establecida en ${labels[cap]}.`)];
     },
   },
 
@@ -412,6 +458,41 @@ export const COMMANDS: CommandDefinition[] = [
       ].join('\n');
 
       return [state, ok(msg)];
+    },
+  },
+
+  // ── view density ──
+  {
+    name: 'view density',
+    aliases: ['density-map'],
+    description: 'Muestra resumen de caps de densidad asignados en el mapa',
+    usage: 'view density',
+    execute(_args, state): [GameState, ReturnType<typeof ok>] {
+      const zoneTypes = ['residential', 'commercial', 'industrial'] as const;
+      const lines: string[] = ['=== MAPA DE DENSIDADES ==='];
+
+      for (const zt of zoneTypes) {
+        const tiles = state.tiles.filter((t) => t.type === zt);
+        if (tiles.length === 0) continue;
+        const counts = { 1: 0, 2: 0, 3: 0 };
+        for (const t of tiles) counts[t.densityCap ?? 3]++;
+        const labels: Record<1|2|3, string> = { 1: 'baja', 2: 'media', 3: 'alta' };
+        lines.push(`${zt}: ${Object.entries(counts)
+          .filter(([, n]) => n > 0)
+          .map(([cap, n]) => `${n} ${labels[Number(cap) as 1|2|3]}`)
+          .join(', ')}`);
+      }
+
+      // High-density tiles that can't develop due to pollution or services
+      const blocked = state.tiles.filter(
+        (t) => t.type === 'residential' && (t.densityCap ?? 3) === 3 && t.zoneLevel < 3 &&
+        ((t.pollution ?? 0) >= 30 || Object.values(t.coverage).filter(Boolean).length < 7),
+      );
+      if (blocked.length > 0) {
+        lines.push(`Zonas alta densidad bloqueadas: ${blocked.length} (necesitan <30 contaminación y 7 servicios)`);
+      }
+
+      return [state, ok(lines.join('\n'))];
     },
   },
 

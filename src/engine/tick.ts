@@ -69,9 +69,19 @@ function updatePopulation(state: GameState): GameState {
         ? Math.min(maxTier, 2)
         : maxTier;
 
+      // Density cap set by player; high-density residential also needs clean air + all services
+      const cap = tile.densityCap ?? 3;
+      const highDensityMet =
+        cap < 3 ||
+        tile.type !== 'residential' ||
+        ((tile.pollution ?? 0) < 30 && serviceScore >= 7);
+      const effectiveMaxLevel = highDensityMet
+        ? Math.min(effectiveMaxTier, cap)
+        : Math.min(effectiveMaxTier, cap, 2);
+
       const pollutionCapMult = pollutionPopCapMultiplier(tile.pollution ?? 0);
       const maxPop = Math.floor(tile.zoneLevel * BALANCE.populationPerZoneLevel * pollutionCapMult);
-      const canGrow = tile.zoneLevel < effectiveMaxTier && tile.zoneLevel < 3 && serviceScore >= 3 && (tile.pollution ?? 0) < 80;
+      const canGrow = tile.zoneLevel < effectiveMaxLevel && tile.zoneLevel < 3 && serviceScore >= 3 && (tile.pollution ?? 0) < 80;
 
       // Demand multiplier: high demand = faster growth, low = slower
       const demand = state.rciDemand;
@@ -111,12 +121,15 @@ function updatePopulation(state: GameState): GameState {
   return { ...state, tiles };
 }
 
-/** Update variant chars for all tiles based on zone level */
+/** Update variant chars for all tiles based on zone level and density cap */
 function refreshVariants(state: GameState): GameState {
-  const resChars: Record<number, string> = { 0: '.', 1: '░', 2: '▒', 3: '█' };
+  // Level-0 residential: show density cap as a subtle dot variant
+  const emptyDotByCap: Record<number, string> = { 1: '·', 2: '∙', 3: '.' };
+  const resChars: Record<number, string> = { 1: '░', 2: '▒', 3: '█' };
   const tiles = state.tiles.map((t) => {
     if (t.type === 'residential') {
-      return { ...t, variant: resChars[t.zoneLevel] ?? '.' };
+      if (t.zoneLevel === 0) return { ...t, variant: emptyDotByCap[t.densityCap ?? 3] ?? '.' };
+      return { ...t, variant: resChars[t.zoneLevel] ?? '░' };
     }
     return t;
   });

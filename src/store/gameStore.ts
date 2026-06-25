@@ -60,7 +60,28 @@ export interface SaveSlotMeta {
   balance?: number;
 }
 
-export type BuildTool = ZoneType | 'road' | 'demolish';
+export type DensityTool =
+  | 'residential-low' | 'residential-medium' | 'residential-high'
+  | 'commercial-low' | 'commercial-medium' | 'commercial-high'
+  | 'industrial-light' | 'industrial-medium' | 'industrial-heavy';
+
+export type BuildTool = ZoneType | 'road' | 'demolish' | DensityTool;
+
+const DENSITY_TOOL_MAP: Record<DensityTool, { zone: ZoneType; cap: 1 | 2 | 3 }> = {
+  'residential-low':    { zone: 'residential', cap: 1 },
+  'residential-medium': { zone: 'residential', cap: 2 },
+  'residential-high':   { zone: 'residential', cap: 3 },
+  'commercial-low':     { zone: 'commercial',  cap: 1 },
+  'commercial-medium':  { zone: 'commercial',  cap: 2 },
+  'commercial-high':    { zone: 'commercial',  cap: 3 },
+  'industrial-light':   { zone: 'industrial',  cap: 1 },
+  'industrial-medium':  { zone: 'industrial',  cap: 2 },
+  'industrial-heavy':   { zone: 'industrial',  cap: 3 },
+};
+
+function parseDensityTool(tool: BuildTool): { zone: ZoneType; cap: 1 | 2 | 3 } | null {
+  return DENSITY_TOOL_MAP[tool as DensityTool] ?? null;
+}
 
 interface GameStore {
   state: GameState;
@@ -270,15 +291,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return;
     }
 
-    // Zone or building placement
-    const building = BUILDINGS.find((b) => b.type === buildTool);
+    // Zone or building placement (with optional density variant)
+    const densityInfo = parseDensityTool(buildTool);
+    const effectiveZone = densityInfo ? densityInfo.zone : (buildTool as ZoneType);
+    const densityCap = densityInfo?.cap;
+    const building = BUILDINGS.find((b) => b.type === effectiveZone);
     const cost = building?.cost ?? 0;
     if (cost > 0 && state.economy.balance < cost) {
       get().addLog(`Fondos insuficientes. Necesitas $${cost}.`, 'warning', 'system');
       return;
     }
 
-    let next = zoneTile(state, x, y, buildTool as ZoneType);
+    let next = zoneTile(state, x, y, effectiveZone, densityCap);
     if (cost > 0) {
       next = { ...next, economy: { ...next.economy, balance: next.economy.balance - cost } };
     }
@@ -288,7 +312,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       actionHistory: [state, ...s.actionHistory].slice(0, MAX_UNDO_HISTORY),
     }));
     get().addLog(
-      `${building?.name ?? buildTool} construido en (${x},${y}).${cost > 0 ? ` -$${cost}` : ''}`,
+      `${building?.name ?? effectiveZone} construido en (${x},${y}).${cost > 0 ? ` -$${cost}` : ''}${densityCap ? ` (densidad cap: ${densityCap})` : ''}`,
       'info',
       'system',
     );

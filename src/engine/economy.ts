@@ -13,11 +13,16 @@ const ZONE_INCOME_BASE: Record<string, number> = {
   industrial: BALANCE.industrialIncomeBase,
 };
 
+const DENSITY_INCOME_MULT: Record<number, number> = { 1: 0.7, 2: 1.0, 3: 1.3 };
+
 /** Monthly tax income from a single tile */
 function tileTaxIncome(tile: Tile, taxRate: number): number {
   const base = ZONE_INCOME_BASE[tile.type] ?? 0;
   if (base === 0) return 0;
-  return Math.floor(base * tile.zoneLevel * tile.population * (taxRate / 100));
+  const densityMult = (tile.type === 'commercial' || tile.type === 'industrial')
+    ? (DENSITY_INCOME_MULT[tile.densityCap ?? 3] ?? 1.0)
+    : 1.0;
+  return Math.floor(base * tile.zoneLevel * tile.population * (taxRate / 100) * densityMult);
 }
 
 /** Total tax income across all tiles */
