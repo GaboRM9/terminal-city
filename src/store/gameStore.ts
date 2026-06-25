@@ -13,6 +13,9 @@ import { createInitialMilestones } from '../data/milestoneDefs';
 
 const WORLD_WIDTH = 40;
 const WORLD_HEIGHT = 20;
+const MAX_UNDO_HISTORY = 10;
+const AUTOSAVE_INTERVAL = 12; // ticks
+const SAVE_KEY_PREFIX = 'terminal-city-save-';
 
 function createInitialState(): GameState {
   return {
@@ -46,12 +49,20 @@ function createInitialState(): GameState {
   };
 }
 
-const SAVE_KEY = 'terminal-city-save';
+export interface SaveSlotMeta {
+  slot: number;
+  isEmpty: boolean;
+  year?: number;
+  month?: number;
+  population?: number;
+  balance?: number;
+}
 
 export type BuildTool = ZoneType | 'road' | 'demolish';
 
 interface GameStore {
   state: GameState;
+  actionHistory: GameState[];
 
   // Build mode UI state (not part of game state)
   buildTool: BuildTool | null;
@@ -83,16 +94,31 @@ interface GameStore {
   // Log
   addLog: (message: string, severity?: LogEntry['severity'], source?: LogEntry['source']) => void;
 
+  // Undo
+  undo: () => void;
+
   // Persistence
-  saveGame: () => void;
-  loadGame: () => boolean;
+  saveGame: (slot?: number) => void;
+  loadGame: (slot?: number) => boolean;
+  getSavesMeta: () => SaveSlotMeta[];
   resetGame: () => void;
 }
 
 let _tickInterval: ReturnType<typeof setInterval> | null = null;
 
+function performTick(state: GameState): GameState {
+  const next = tick(state);
+  if (next.tickCount % AUTOSAVE_INTERVAL === 0) {
+    try {
+      localStorage.setItem(`${SAVE_KEY_PREFIX}0`, JSON.stringify(next));
+    } catch { /* quota exceeded — ignore */ }
+  }
+  return next;
+}
+
 export const useGameStore = create<GameStore>((set, get) => ({
   state: createInitialState(),
+  actionHistory: [],
   buildTool: null,
   roadStart: null,
   showLivestats: false,
@@ -106,7 +132,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const ms = speedMs[String(state.speed)] ?? 3000;
 
     _tickInterval = setInterval(() => {
-      set((s) => ({ state: tick(s.state) }));
+      set((s) => ({ state: performTick(s.state) }));
     }, ms);
 
     set((s) => ({ state: { ...s.state, running: true } }));
@@ -135,14 +161,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const ms = speedMs[String(speed)] ?? 3000;
 
     _tickInterval = setInterval(() => {
-      set((s) => ({ state: tick(s.state) }));
+      set((s) => ({ state: performTick(s.state) }));
     }, ms);
 
     set((s) => ({ state: { ...s.state, speed, running: true } }));
   },
 
   advanceTick: () => {
-    set((s) => ({ state: tick(s.state) }));
+    set((s) => ({ state: performTick(s.state) }));
   },
 
   zoneAt: (x, y, zone) => {
@@ -161,15 +187,26 @@ export const useGameStore = create<GameStore>((set, get) => ({
       };
     }
     next = recalculateRoadAccess(next);
-    set({ state: next });
+    set((s) => ({
+      state: next,
+      actionHistory: [state, ...s.actionHistory].slice(0, MAX_UNDO_HISTORY),
+    }));
   },
 
   buildRoad: (x1, y1, x2, y2) => {
-    set((s) => ({ state: traceRoad(s.state, x1, y1, x2, y2) }));
+    const { state } = get();
+    set((s) => ({
+      state: traceRoad(s.state, x1, y1, x2, y2),
+      actionHistory: [state, ...s.actionHistory].slice(0, MAX_UNDO_HISTORY),
+    }));
   },
 
   demolishAt: (x, y) => {
-    set((s) => ({ state: demolishTile(s.state, x, y) }));
+    const { state } = get();
+    set((s) => ({
+      state: demolishTile(s.state, x, y),
+      actionHistory: [state, ...s.actionHistory].slice(0, MAX_UNDO_HISTORY),
+    }));
   },
 
   selectBuildTool: (tool) => {
@@ -197,7 +234,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
         get().addLog(`No hay nada que demoler en (${x},${y}).`, 'warning', 'system');
         return;
       }
-      set((s) => ({ state: demolishTile(s.state, x, y) }));
+      set((s) => ({
+        state: demolishTile(s.state, x, y),
+        actionHistory: [state, ...s.actionHistory].slice(0, MAX_UNDO_HISTORY),
+      }));
       get().addLog(`Demolido: (${x},${y}).`, 'info', 'system');
       return;
     }
@@ -214,7 +254,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
           set({ roadStart: null });
           return;
         }
-        set((s) => ({ state: traceRoad(s.state, roadStart.x, roadStart.y, x, y), roadStart: null }));
+        set((s) => ({
+          state: traceRoad(s.state, roadStart.x, roadStart.y, x, y),
+          actionHistory: [state, ...s.actionHistory].slice(0, MAX_UNDO_HISTORY),
+          roadStart: null,
+        }));
         get().addLog(`Carretera trazada de (${roadStart.x},${roadStart.y}) a (${x},${y}). -$${cost}`, 'info', 'system');
       }
       return;
@@ -233,7 +277,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
       next = { ...next, economy: { ...next.economy, balance: next.economy.balance - cost } };
     }
     next = recalculateRoadAccess(next);
-    set({ state: next });
+    set((s) => ({
+      state: next,
+      actionHistory: [state, ...s.actionHistory].slice(0, MAX_UNDO_HISTORY),
+    }));
     get().addLog(
       `${building?.name ?? buildTool} construido en (${x},${y}).${cost > 0 ? ` -$${cost}` : ''}`,
       'info',
@@ -266,23 +313,39 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }));
   },
 
-  saveGame: () => {
+  undo: () => {
+    const { actionHistory } = get();
+    if (actionHistory.length === 0) {
+      get().addLog('No hay acciones para deshacer.', 'warning', 'system');
+      return;
+    }
+    const [prev, ...rest] = actionHistory;
+    set({ state: prev, actionHistory: rest });
+    get().addLog('Acción deshecha.', 'info', 'system');
+  },
+
+  saveGame: (slot = 0) => {
     const { state } = get();
+    const key = `${SAVE_KEY_PREFIX}${slot}`;
     try {
-      localStorage.setItem(SAVE_KEY, JSON.stringify(state));
-      get().addLog('Partida guardada exitosamente.', 'info', 'system');
+      localStorage.setItem(key, JSON.stringify(state));
+      get().addLog(`Partida guardada en ranura ${slot}.`, 'info', 'system');
     } catch {
       get().addLog('Error al guardar la partida.', 'warning', 'system');
     }
   },
 
-  loadGame: () => {
+  loadGame: (slot = 0) => {
+    const key = `${SAVE_KEY_PREFIX}${slot}`;
     try {
-      const raw = localStorage.getItem(SAVE_KEY);
-      if (!raw) return false;
+      const raw = localStorage.getItem(key);
+      if (!raw) {
+        get().addLog(`Ranura ${slot} está vacía.`, 'warning', 'system');
+        return false;
+      }
       const loaded = JSON.parse(raw) as GameState;
-      set({ state: { ...loaded, running: false } });
-      get().addLog('Partida cargada exitosamente.', 'info', 'system');
+      set({ state: { ...loaded, running: false }, actionHistory: [] });
+      get().addLog(`Partida cargada desde ranura ${slot}.`, 'info', 'system');
       return true;
     } catch {
       get().addLog('Error al cargar la partida. Archivo corrupto.', 'warning', 'system');
@@ -290,11 +353,31 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
+  getSavesMeta: (): SaveSlotMeta[] => {
+    return [0, 1, 2].map((slot) => {
+      try {
+        const raw = localStorage.getItem(`${SAVE_KEY_PREFIX}${slot}`);
+        if (!raw) return { slot, isEmpty: true };
+        const s = JSON.parse(raw) as GameState;
+        return {
+          slot,
+          isEmpty: false,
+          year: s.year,
+          month: s.month,
+          population: s.population,
+          balance: s.economy.balance,
+        };
+      } catch {
+        return { slot, isEmpty: true };
+      }
+    });
+  },
+
   resetGame: () => {
     if (_tickInterval) {
       clearInterval(_tickInterval);
       _tickInterval = null;
     }
-    set({ state: createInitialState() });
+    set({ state: createInitialState(), actionHistory: [] });
   },
 }));
