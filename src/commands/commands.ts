@@ -13,6 +13,7 @@ import { TILE_LEGEND } from '../renderer/asciiMap';
 import { CHAIN_DESCRIPTIONS } from '../data/productionChains';
 import { formatMilestoneList } from '../engine/milestones';
 import { demandLabel } from '../engine/demand';
+import { createTestCity } from '../data/testCity';
 
 // ─────────────────────────────────────────────
 //  Command registry — add new commands here
@@ -782,6 +783,23 @@ export const COMMANDS: CommandDefinition[] = [
     usage: 'livestats',
     execute(_args, state): [GameState, ReturnType<typeof ok>] {
       return [state, { success: true, message: '__LIVESTATS__', severity: 'info' }];
+    },
+  },
+
+  // ── seed ──
+  {
+    name: 'seed',
+    aliases: ['ciudad prueba', 'testcity'],
+    description: 'Carga una ciudad de prueba pre-construida (Año 6, ~430 hab)',
+    usage: 'seed',
+    execute(_args, _state): [GameState, ReturnType<typeof ok>] {
+      const city = createTestCity();
+      return [city, ok(
+        `Ciudad semilla cargada.\n` +
+        `Población: ${city.population} | Balance: $${city.economy.balance.toLocaleString()} | ` +
+        `Felicidad: ${city.happiness}% | Contaminación media: ${city.avgPollution}\n` +
+        `Tip: escribe "save 1" para guardarla en la ranura 1.`,
+      )];
     },
   },
 
