@@ -35,6 +35,10 @@ function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+function isRoadTile(t: Tile | undefined): boolean {
+  return t?.type === 'road' || t?.type === 'avenue' || t?.type === 'highway';
+}
+
 function roadNeighbors(
   x: number, y: number,
   tiles: Tile[], W: number, H: number,
@@ -44,12 +48,12 @@ function roadNeighbors(
     { x, y: y + 1 }, { x, y: y - 1 },
   ].filter(
     (p) => p.x >= 0 && p.y >= 0 && p.x < W && p.y < H
-      && tiles[p.y * W + p.x]?.type === 'road',
+      && isRoadTile(tiles[p.y * W + p.x]),
   );
 }
 
 export function initCars(tiles: Tile[], W: number, H: number): PixelCar[] {
-  const roads = tiles.filter((t) => t.type === 'road');
+  const roads = tiles.filter((t) => isRoadTile(t));
   if (roads.length < 2) return [];
 
   const count = Math.min(CAR_COUNT, Math.max(1, Math.floor(roads.length * 0.25)));
@@ -68,15 +72,19 @@ export function initCars(tiles: Tile[], W: number, H: number): PixelCar[] {
 
     const target = pick(neighbors);
 
+    const congestion = tiles[start.y * W + start.x]?.trafficLoad ?? 0;
+    const baseSpeed = start.type === 'highway' ? 0.06 : start.type === 'avenue' ? 0.045 : 0.036;
+    const congestionFactor = congestion >= 95 ? 0.05 : congestion >= 80 ? 0.4 : 1.0;
+
     cars.push({
       id: i,
       fromX: start.x, fromY: start.y,
       toX: target.x,  toY: target.y,
-      t: Math.random(), // stagger so they don't all move in sync
+      t: Math.random(),
       dx: target.x - start.x,
       dy: target.y - start.y,
       color: CAR_COLORS[i % CAR_COLORS.length],
-      speed: 0.036 + Math.random() * 0.030,
+      speed: (baseSpeed + Math.random() * 0.020) * congestionFactor,
     });
   }
 
@@ -131,12 +139,12 @@ export function respawnStuckCars(
   tiles: Tile[],
   W: number, H: number,
 ): PixelCar[] {
-  const roads = tiles.filter((t) => t.type === 'road');
+  const roads = tiles.filter((t) => isRoadTile(t));
   if (roads.length < 2) return [];
 
   return cars.map((car) => {
     const onTile = tiles[car.toY * W + car.toX];
-    if (onTile?.type === 'road') return car;
+    if (isRoadTile(onTile)) return car;
 
     // Respawn on a random road
     const start = pick(roads);

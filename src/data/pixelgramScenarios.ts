@@ -214,6 +214,36 @@ export const SCENARIOS: PostScenario[] = [
     ],
   },
 
+  // ── Traffic jam ──────────────────────────────────────────────
+  {
+    id: 'traffic_jam',
+    condition: (s) => (s.avgTrafficLoad ?? 0) >= 80,
+    weight: 8,
+    personalities: ['pessimist', 'political', 'neutral', 'funny'],
+    templates: [
+      tf((s) => `Congestión urbana al ${s.avgTrafficLoad ?? 0}%. Llegué al trabajo en taxi y tardé lo mismo a pie. Alguien construya una avenida ya 🚗`),
+      t('El tráfico está tan mal que los coches se mueven más despacio que yo caminando. Y yo camino despacio 🐢'),
+      t('Propuesta: renombrar la ciudad a "Terminal Parking". Es más honesto con la situación actual'),
+      t('Reunión de emergencia municipal: el alcalde llegó tarde. Por el tráfico. La ironía es demasiado intensa'),
+      t('Mi coche lleva 40 minutos en el mismo semáforo. Le he puesto nombre: La Trampa. Relación complicada'),
+      t('Si alguien del ayuntamiento lee esto: necesitamos avenidas. No pistas de baile, AVENIDAS. Con doble carril 🛣️'),
+    ],
+  },
+
+  // ── Clean traffic flow ────────────────────────────────────────
+  {
+    id: 'traffic_flow',
+    condition: (s) => (s.avgTrafficLoad ?? 0) < 30 && s.population >= 100,
+    weight: 3,
+    personalities: ['optimist', 'neutral'],
+    templates: [
+      t('Vine del centro al trabajo en 8 minutos. OCHO. Esta ciudad tiene algo especial 🚗💨'),
+      t('Las avenidas nuevas cambiaron todo. De una hora a quince minutos. Eso es planificación bien hecha'),
+      t('Tráfico fluido con 100+ vecinos. No creía que fuera posible. El alcalde hizo los deberes esta vez 🚦✅'),
+      t('La autopista del norte vacía a las 9am. Sigo sin creerlo. Parece que alguien leyó el plan de movilidad'),
+    ],
+  },
+
   // ── After fire event ─────────────────────────────────────────
   {
     id: 'after_fire',
@@ -475,6 +505,126 @@ export const SCENARIOS: PostScenario[] = [
       t('La densidad urbana tiene sus pros: más vecinos, más vida, más ruido, menos sueño. Balance'),
       t('Vivo en la torre más alta del barrio. Vista privilegiada de problemas no resueltos 🔭'),
       t('El barrio densificó. Ahora el ascensor siempre está ocupado. Civilización en toda su expresión'),
+    ],
+  },
+
+  // ── No hospital / health risk ────────────────────────────────
+  {
+    id: 'no_hospital',
+    condition: (s) =>
+      s.population > 20 &&
+      !s.tiles.some((t) => t.type === 'hospital'),
+    weight: 5,
+    personalities: ['pessimist', 'political', 'neutral'],
+    templates: [
+      t('Me corté cocinando. Fui al "centro médico". Era una carpa con aspirinas. ¿Tenemos hospital? Pregunta seria'),
+      t('Ciudad sin hospital = ciudad que apuesta a que nadie se enferme. Estrategia audaz, no lo negaré'),
+      t('Mi abuela necesita atención médica. Lo más cercano es a 3 horas. Esto no es una ciudad, es un campamento'),
+      t('¿Cuándo construimos el hospital? Mientras el alcalde piensa, yo me vacuno con lo que consigo 💉'),
+      t('Sin cobertura sanitaria los más vulnerables sufren primero. No es política, es matemática básica'),
+      t('Hilo: por qué una ciudad sin hospital no es ciudad. Respuesta corta: porque la gente se muere más fácil'),
+    ],
+  },
+
+  // ── Disease outbreak event ────────────────────────────────────
+  {
+    id: 'disease_outbreak',
+    condition: (s) =>
+      s.eventLog.some(
+        (e) => e.message.includes('Brote de enfermedad') &&
+               e.year === s.year && Math.abs(e.month - s.month) <= 3,
+      ),
+    weight: 9,
+    personalities: ['pessimist', 'political', 'neutral', 'funny'],
+    templates: [
+      t('¡BROTE CONFIRMADO! Vecinos enfermos, sin hospital, sin plan. Esto es lo que pasa cuando ignoramos la sanidad 😷'),
+      t('Llevo tres días con fiebre. El "médico" del barrio es el señor que estudió enfermería en 1987. Dios nos cuide'),
+      t('El brote empezó en mi calle. Cinco vecinos con síntomas. La alcaldía mandó... un comunicado. Gracias'),
+      t('Epidemia en curso. Nota al alcalde: un hospital no es un gasto, es una inversión en no morirnos todos'),
+      t('Mi barrio parece escena de película apocalíptica. Todos tosiendo, nadie sabe qué hacer 🤒'),
+      t('Antes del brote decíamos "algún día construiremos el hospital". Ese día era hoy. Tarde nos damos cuenta'),
+      t('Positivo de la situación: por fin el alcalde mencionó la palabra "sanidad". Progreso, supongo 🙄'),
+    ],
+  },
+
+  // ── Hospital exists ────────────────────────────────────────────
+  {
+    id: 'has_hospital',
+    condition: (s) => s.tiles.some((t) => t.type === 'hospital'),
+    weight: 3,
+    personalities: ['optimist', 'neutral'],
+    templates: [
+      t('¡Inauguraron el hospital! 🏥 Primera vez en la historia de esta ciudad que tenemos sanidad real. Emocionada'),
+      t('Fui al hospital nuevo a hacerme un chequeo. El personal es amable, el edificio está limpio. Esto sí'),
+      t('Con hospital la ciudad se siente diferente. Más segura. Como si alguien pensara en nosotros'),
+      t('Mi vecina tuvo el bebé en el hospital nuevo. Los dos están bien. Con el anterior ni nos arriesgamos 👶'),
+      t('Dato: las ciudades con buena sanidad crecen más rápido. Acabamos de dar el paso más importante'),
+    ],
+  },
+
+  // ── School / education ────────────────────────────────────────
+  {
+    id: 'has_school',
+    condition: (s) => s.tiles.some((t) => t.type === 'school' || t.type === 'university'),
+    weight: 3,
+    personalities: ['optimist', 'neutral', 'political'],
+    templates: [
+      t('¡Abren la escuela! 📚 Mis hijos ya tienen donde estudiar. Esta ciudad crece de verdad'),
+      t('Primera clase en la escuela nueva. Los niños del barrio llegaron con mochilas. Imagen que no olvidaré'),
+      t('Con escuela viene educación, con educación viene futuro. Cadena de causalidad que me gusta mucho'),
+      t('La universidad acepta inscripciones. Primera vez que no tengo que salir de la ciudad para estudiar 🎓'),
+      t('Inversión en educación = inversión en la próxima generación. Gracias a quien tomó esa decisión'),
+      t('Fui de visita a la escuela. Los niños aprendiendo, los maestros motivados. Así se construye una ciudad 📖'),
+    ],
+  },
+
+  // ── High pollution / industrial smog ─────────────────────────
+  {
+    id: 'high_pollution',
+    condition: (s) => s.avgPollution > 50,
+    weight: 6,
+    personalities: ['pessimist', 'political', 'neutral'],
+    templates: [
+      tf((s) => `Contaminación urbana en ${s.avgPollution}/100. Esto ya no es un problema menor, es una emergencia de salud pública 😷`),
+      t('Abro la ventana y huele a fábrica. Cierro la ventana y huele a fábrica adentro. Hay que hacer algo'),
+      t('El aire de esta ciudad me está enfermando literalmente. Datos > opiniones: ve la calidad del aire #SmogCity'),
+      t('¿Saben qué tienen en común los vecinos de mi calle? Todos tosemos. Todos. El alcalde no tose, él vive lejos'),
+      t('Mis plantas de interior murieron. MIS PLANTAS DE INTERIOR. El aire exterior las mató desde adentro'),
+      t('Propongo que el alcalde visite el barrio industrial un día. Sin mascarilla. Que respire lo que respiramos 🏭'),
+    ],
+  },
+
+  // ── Clean city ────────────────────────────────────────────────
+  {
+    id: 'clean_city',
+    condition: (s) => s.avgPollution < 10 && s.tiles.some((t) => t.type === 'industrial'),
+    weight: 3,
+    personalities: ['optimist', 'neutral'],
+    templates: [
+      t('Hay industria pero el aire está limpio. Esto es lo que pasa cuando la planificación urbana funciona 🌿'),
+      t('Respiré hondo esta mañana. Huele a... nada. Limpio. ¿Cuándo fue la última vez que eso fue posible? Hoy 🍃'),
+      t('Ciudad industrial y cielo azul. No creía que fuera posible aquí. Los parques y la planta de residuos hacen su trabajo'),
+      t('Calidad del aire: excelente. Salud de mis hijos: bien. Esto es lo que exigimos. Que esto dure 💚'),
+    ],
+  },
+
+  // ── Smog event ────────────────────────────────────────────────
+  {
+    id: 'industrial_smog',
+    condition: (s) =>
+      s.eventLog.some(
+        (e) => e.message.includes('smog') &&
+               e.year === s.year && Math.abs(e.month - s.month) <= 2,
+      ),
+    weight: 9,
+    personalities: ['pessimist', 'political', 'neutral', 'funny'],
+    templates: [
+      t('¡ALERTA DE SMOG EMITIDA! Por fin reconocen lo que llevamos meses respirando. Gracias por la confirmación oficial 🙄'),
+      t('Alerta de smog. Mis pulmones ya lo sabían desde enero, pero bueno, que la ciencia también lo diga'),
+      t('El smog llegó al nivel crítico. Puse una foto del cielo: naranja a las 10am. Arte urbano involuntario'),
+      t('Me dijeron que construyeran parques. Me dijeron que era "exagerado". Alerta de smog. Me deben una disculpa 🌳'),
+      t('Smog warning en mi teléfono. Tercer mes seguido. Propongo cambiar el nombre: Ciudad del Smog. Más honesto'),
+      t('Vivo cerca de tres fábricas y cero parques. La alerta de smog me tomó completamente por sorpresa. Totalmente 🙃'),
     ],
   },
 

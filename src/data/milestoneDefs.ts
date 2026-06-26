@@ -110,6 +110,16 @@ export const MILESTONE_DEFS: MilestoneDef[] = [
       'Nivel 3 de densidad. Desde el piso 8 se ve toda la ciudad. Esto ya es una metrópolis 🌆',
   },
   {
+    id: 'traffic_master',
+    title: 'Maestro del Tráfico',
+    description: 'Mantén congestión promedio < 50% con ≥200 habitantes',
+    reward: 6_000,
+    isVictory: false,
+    condition: (s) => s.population >= 200 && (s.avgTrafficLoad ?? 0) < 50,
+    pixelgramPost:
+      'Increíble — 200+ vecinos y el tráfico fluye sin atascos. Eso es planificación urbana de verdad 🚦✨',
+  },
+  {
     id: 'city_charter',
     title: '⭐ CARTA DE CIUDAD',
     description: '500 residentes + 75% felicidad + $25,000 en balance',

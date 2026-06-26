@@ -100,6 +100,7 @@ function drawFrame(
   buildTool: string | null,
   roadStart: { x: number; y: number } | null,
   dimUncovered: boolean,
+  showTraffic: boolean,
 ): void {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -184,6 +185,25 @@ function drawFrame(
 
       ctx.fillStyle = color;
       ctx.fillText(char, px + TILE_SIZE / 2, py + TILE_SIZE / 2 + 1);
+
+      // Pollution overlay — orange tint proportional to pollution level
+      const pol = tile.pollution ?? 0;
+      if (pol > 10) {
+        const alpha = Math.min(0.55, (pol - 10) / 120);
+        ctx.fillStyle = `rgba(255, 100, 0, ${alpha.toFixed(3)})`;
+        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+      }
+
+      // Traffic heatmap overlay (toggled via view traffic)
+      if (showTraffic && (tile.type === 'road' || tile.type === 'avenue' || tile.type === 'highway')) {
+        const load = tile.trafficLoad ?? 0;
+        if (load > 0) {
+          const r = Math.round(load * 2.55);
+          const g = Math.round((100 - load) * 2.55);
+          ctx.fillStyle = `rgba(${r}, ${g}, 0, 0.75)`;
+          ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+        }
+      }
     }
   }
 
@@ -206,18 +226,21 @@ export function MapRenderer({ dimUncovered = false }: MapRendererProps): JSX.Ele
   const roadStartRef  = useRef<{ x: number; y: number } | null>(null);
   const dimRef        = useRef(dimUncovered);
 
-  const { state, buildTool, roadStart, handleTileClick } = useGameStore();
+  const { state, buildTool, roadStart, handleTileClick, showTraffic } = useGameStore();
 
   stateRef.current     = state;
   buildToolRef.current = buildTool;
   roadStartRef.current = roadStart;
   dimRef.current       = dimUncovered;
 
+  const showTrafficRef = useRef(showTraffic);
+  showTrafficRef.current = showTraffic;
+
   const [hoverInfo, setHoverInfo] = useState('');
 
   // Reinitialise / respawn cars whenever road count changes
   const roadCount = useMemo(
-    () => state.tiles.filter((t) => t.type === 'road').length,
+    () => state.tiles.filter((t) => t.type === 'road' || t.type === 'avenue' || t.type === 'highway').length,
     [state.tiles],
   );
 
@@ -262,6 +285,7 @@ export function MapRenderer({ dimUncovered = false }: MapRendererProps): JSX.Ele
         canvas, s, carsRef.current,
         hoveredRef.current, buildToolRef.current,
         roadStartRef.current, dimRef.current,
+        showTrafficRef.current,
       );
       frameRef.current = requestAnimationFrame(frame);
     }

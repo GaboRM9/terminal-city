@@ -50,7 +50,14 @@ export function calculateRCIDemand(state: GameState): RCIDemand {
     indSaturation * productionBonus * 70 * commercialActive,
   ));
 
-  return { r, c, i };
+  // Traffic congestion suppresses demand
+  const trafficPenalty = state.avgTrafficLoad >= 80 ? 0.8 : 1.0;
+
+  return {
+    r: clamp(Math.round(r * trafficPenalty)),
+    c: clamp(Math.round(c * trafficPenalty)),
+    i: clamp(Math.round(i * trafficPenalty)),
+  };
 }
 
 function clamp(n: number): number {

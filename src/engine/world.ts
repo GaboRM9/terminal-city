@@ -16,6 +16,9 @@ function makeTile(x: number, y: number): Tile {
     variant: '.',
     damaged: false,
     hasRoadAccess: false,
+    pollution: 0,
+    densityCap: 3,
+    trafficLoad: 0,
   };
 }
 
@@ -52,20 +55,28 @@ export function getTileChar(tile: Tile): string {
 }
 
 /** Place a zone type on a tile, clearing previous population if type changes */
-export function zoneTile(state: GameState, x: number, y: number, zone: ZoneType): GameState {
+export function zoneTile(
+  state: GameState,
+  x: number,
+  y: number,
+  zone: ZoneType,
+  densityCap?: 1 | 2 | 3,
+): GameState {
   const tile = getTile(state, x, y);
   if (!tile) return state;
 
   const building = BUILDINGS.find((b) => b.type === zone);
   const char = building?.char ?? '.';
 
-  return setTile(state, x, y, {
+  const patch: Partial<Tile> = {
     type: zone,
     zoneLevel: zone === 'empty' ? 0 : 1,
     population: zone === tile.type ? tile.population : 0,
     variant: char,
     damaged: false,
-  });
+  };
+  if (densityCap !== undefined) patch.densityCap = densityCap;
+  return setTile(state, x, y, patch);
 }
 
 /** Trace a road from (x1,y1) to (x2,y2) in a straight L-shaped path */
@@ -113,13 +124,12 @@ export function recalculateRoadAccess(state: GameState): GameState {
   const tiles = state.tiles.map((t) => ({ ...t, hasRoadAccess: false }));
 
   for (const tile of tiles) {
-    if (tile.type === 'road') {
+    if (tile.type === 'road' || tile.type === 'avenue' || tile.type === 'highway') {
       const neighbors = getNeighbors(state, tile.x, tile.y);
       for (const n of neighbors) {
         const idx = n.y * state.worldWidth + n.x;
         tiles[idx] = { ...tiles[idx], hasRoadAccess: true };
       }
-      // Road tiles have access to themselves
       const selfIdx = tile.y * state.worldWidth + tile.x;
       tiles[selfIdx] = { ...tiles[selfIdx], hasRoadAccess: true };
     }

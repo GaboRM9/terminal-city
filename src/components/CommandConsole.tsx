@@ -44,7 +44,7 @@ function OutputLine({ entry }: { entry: LogEntry }): JSX.Element {
 }
 
 export function CommandConsole(): JSX.Element {
-  const { state, addLog, saveGame, loadGame, toggleLivestats, showLivestats } = useGameStore();
+  const { state, addLog, saveGame, loadGame, getSavesMeta, undo, toggleLivestats, showLivestats, toggleCharts, toggleTraffic } = useGameStore();
   const [input, setInput] = useState('');
   const [history, setHistory] = useState<string[]>([]);
   const [historyIdx, setHistoryIdx] = useState(-1);
@@ -73,21 +73,60 @@ export function CommandConsole(): JSX.Element {
 
     addLog(`> ${trimmed}`, 'info', 'command');
 
-    if (trimmed === 'save') { saveGame(); return; }
-    if (trimmed === 'load') { loadGame(); return; }
-
     const [nextState, result] = executeCommand(trimmed, state);
     useGameStore.setState({ state: nextState });
 
-    if (result.message === '__LIVESTATS__') {
+    const msg = result.message;
+
+    if (msg === '__LIVESTATS__') {
       toggleLivestats();
       addLog(showLivestats ? 'Pixelgram activado.' : 'LiveStats activado.', 'info', 'system');
       return;
     }
-    if (result.message !== '__SAVE__' && result.message !== '__LOAD__') {
-      addLog(result.message, result.severity, 'command');
+
+    if (msg === '__CHARTS__') {
+      toggleCharts();
+      addLog('Panel de gráficos activado.', 'info', 'system');
+      return;
     }
-  }, [input, state, addLog, saveGame, loadGame, toggleLivestats, showLivestats]);
+
+    if (msg === '__UNDO__') {
+      undo();
+      return;
+    }
+
+    if (msg === '__SAVES__') {
+      const meta = getSavesMeta();
+      const lines = meta.map((m) =>
+        m.isEmpty
+          ? `  Ranura ${m.slot}: [vacía]`
+          : `  Ranura ${m.slot}: Año ${m.year}, Mes ${m.month} · Pob. ${m.population} · $${m.balance}`,
+      );
+      addLog(['=== RANURAS DE GUARDADO ===', ...lines].join('\n'), 'info', 'command');
+      return;
+    }
+
+    const saveMatch = msg.match(/^__SAVE_(\d)__$/);
+    if (saveMatch) {
+      saveGame(parseInt(saveMatch[1], 10));
+      return;
+    }
+
+    const loadMatch = msg.match(/^__LOAD_(\d)__$/);
+    if (loadMatch) {
+      loadGame(parseInt(loadMatch[1], 10));
+      return;
+    }
+
+    if (msg.startsWith('__TRAFFIC__')) {
+      toggleTraffic();
+      const rest = msg.replace('__TRAFFIC__\n', '');
+      if (rest) addLog(rest, 'info', 'command');
+      return;
+    }
+
+    addLog(msg, result.severity, 'command');
+  }, [input, state, addLog, saveGame, loadGame, getSavesMeta, undo, toggleLivestats, showLivestats, toggleCharts]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
