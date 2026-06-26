@@ -2,6 +2,7 @@ import type { Bond, BondRating, EconomyState, GameState, ServiceType, Tile } fro
 import { BALANCE } from '../data/balanceConfig';
 import { BUILDINGS } from '../data/buildings';
 import { pollutionHappinessPenalty } from './pollution';
+import { buildDistrictMap } from './districts';
 
 // ─────────────────────────────────────────────
 //  Economy calculations — all pure functions
@@ -28,13 +29,18 @@ function tileTaxIncome(tile: Tile, taxRate: number): number {
 /** Total tax income across all tiles */
 export function calculateTotalIncome(state: GameState): number {
   const { taxRate } = state.economy;
-  // High congestion throttles commercial tax intake
   const trafficIncomeMult = state.avgTrafficLoad >= 95 ? 0.7 : 1.0;
+  const districtMap = buildDistrictMap(state.districts);
+
   return state.tiles.reduce((sum, tile) => {
-    const base = tileTaxIncome(tile, taxRate);
-    const mult = (tile.type === 'commercial' || tile.type === 'industrial')
+    const tileIdx = tile.y * state.worldWidth + tile.x;
+    const district = districtMap.get(tileIdx);
+    // Use district tax rate if set, otherwise city-wide
+    const effectiveTaxRate = district?.policies.taxRate ?? taxRate;
+    const base = tileTaxIncome(tile, effectiveTaxRate);
+    const trafficMult = (tile.type === 'commercial' || tile.type === 'industrial')
       ? trafficIncomeMult : 1.0;
-    return sum + Math.floor(base * mult);
+    return sum + Math.floor(base * trafficMult);
   }, 0);
 }
 
@@ -47,12 +53,15 @@ export function calculateTotalExpenses(state: GameState): number {
     total += budget.allocation;
   }
 
-  // Maintenance cost per building
+  // Maintenance cost per building (infrastructure districts reduce by 20%)
+  const districtMap = buildDistrictMap(state.districts);
   for (const tile of state.tiles) {
     const building = BUILDINGS.find((b) => b.type === tile.type);
-    if (building?.maintenanceCost) {
-      total += building.maintenanceCost;
-    }
+    if (!building?.maintenanceCost) continue;
+    const tileIdx = tile.y * state.worldWidth + tile.x;
+    const district = districtMap.get(tileIdx);
+    const infra = district?.policies.spendingPriority === 'infrastructure' ? 0.8 : 1.0;
+    total += Math.floor(building.maintenanceCost * infra);
   }
 
   return total;

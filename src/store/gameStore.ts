@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { GameState, LogEntry, ServiceType, SimulationSpeed, ZoneType } from '../engine/types';
 import { createWorld, demolishTile, recalculateRoadAccess, traceRoad, zoneTile } from '../engine/world';
+import { paintDistrictTile } from '../engine/districts';
 import { tick } from '../engine/tick';
 import { createDefaultEconomy, setServiceBudget, setTaxRate } from '../engine/economy';
 import { BALANCE } from '../data/balanceConfig';
@@ -49,6 +50,7 @@ function createInitialState(): GameState {
     history: [],
     avgPollution: 0,
     avgTrafficLoad: 0,
+    districts: [],
   };
 }
 
@@ -99,6 +101,10 @@ interface GameStore {
   toggleLivestats: () => void;
   toggleCharts: () => void;
   toggleTraffic: () => void;
+
+  // District paint mode
+  districtPaintMode: string | null; // district ID being painted, or null
+  setDistrictPaintMode: (id: string | null) => void;
 
   // Simulation control
   startSimulation: () => void;
@@ -155,6 +161,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   toggleLivestats: () => set((s) => ({ showLivestats: !s.showLivestats, showCharts: false })),
   toggleCharts: () => set((s) => ({ showCharts: !s.showCharts, showLivestats: false })),
   toggleTraffic: () => set((s) => ({ showTraffic: !s.showTraffic })),
+  districtPaintMode: null,
+  setDistrictPaintMode: (id) => set({ districtPaintMode: id }),
 
   startSimulation: () => {
     const { state } = get();
@@ -257,7 +265,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   handleTileClick: (x, y) => {
-    const { buildTool, roadStart, state } = get();
+    const { buildTool, roadStart, state, districtPaintMode } = get();
+
+    // District paint mode takes priority over build tool
+    if (districtPaintMode) {
+      const tileIdx = y * state.worldWidth + x;
+      const next = paintDistrictTile(state, districtPaintMode, tileIdx);
+      set({ state: next });
+      return;
+    }
+
     if (!buildTool) return;
 
     if (buildTool === 'demolish') {

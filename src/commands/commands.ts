@@ -4,6 +4,9 @@ import { zoneTile, demolishTile, traceRoad, recalculateRoadAccess, setTile, getT
 import { setTaxRate, setServiceBudget, issueBond, computeBondRating } from '../engine/economy';
 import { pollutionLabel } from '../engine/pollution';
 import { trafficLabel } from '../engine/traffic';
+import {
+  createDistrict, renameDistrict, deleteDistrict, findDistrictByName, isZoneBanned,
+} from '../engine/districts';
 import { tick } from '../engine/tick';
 import { BUILDINGS } from '../data/buildings';
 import { TILE_LEGEND } from '../renderer/asciiMap';
@@ -66,6 +69,12 @@ export const COMMANDS: CommandDefinition[] = [
 
       if (!VALID_ZONES.has(zoneType)) {
         return [state, err(`Tipo de zona inválido: "${raw}". Usa: ${[...VALID_ZONES].join(', ')} (o con sufijo -low/-medium/-high)`)];
+      }
+
+      // Check district ban
+      const tileIdx = coords.y * state.worldWidth + coords.x;
+      if (isZoneBanned(state, tileIdx, zoneType)) {
+        return [state, err(`La zona "${zoneType}" está prohibida en este distrito.`)];
       }
 
       const building = BUILDINGS.find((b) => b.type === zoneType);
@@ -558,6 +567,153 @@ export const COMMANDS: CommandDefinition[] = [
       ].join('\n');
 
       return [state, { success: true, message: `__TRAFFIC__\n${msg}`, severity: 'info' }];
+    },
+  },
+
+  // ── district commands ──
+  {
+    name: 'district create',
+    aliases: ['distrito crear', 'dc'],
+    description: 'Crea un nuevo distrito y activa el modo pintura (máx. 4)',
+    usage: 'district create <nombre>',
+    execute(args, state): [GameState, ReturnType<typeof ok>] {
+      if (args.length < 1) return [state, err('Uso: district create <nombre>')];
+      const name = args.join(' ');
+      if (state.districts.length >= 4) {
+        return [state, err('Límite de 4 distritos alcanzado. Elimina uno para crear otro.')];
+      }
+      if (state.districts.some((d) => d.name.toLowerCase() === name.toLowerCase())) {
+        return [state, err(`Ya existe un distrito llamado "${name}".`)];
+      }
+      const [next, district] = createDistrict(state, name);
+      return [next, ok(`__DISTRICT_PAINT__:${district.id}\nDistrito "${district.name}" creado (color: ${district.color}). Haz clic en tiles para añadirlos. Escribe "district stop" para terminar.`)];
+    },
+  },
+  {
+    name: 'district paint',
+    aliases: ['distrito pintar', 'dp'],
+    description: 'Entra en modo pintura para un distrito existente',
+    usage: 'district paint <nombre>',
+    execute(args, state): [GameState, ReturnType<typeof ok>] {
+      if (args.length < 1) return [state, err('Uso: district paint <nombre>')];
+      const name = args.join(' ');
+      const d = findDistrictByName(state, name);
+      if (!d) return [state, err(`Distrito "${name}" no encontrado.`)];
+      return [state, ok(`__DISTRICT_PAINT__:${d.id}\nModo pintura activado para "${d.name}". Clic = añadir/quitar tile. "district stop" para terminar.`)];
+    },
+  },
+  {
+    name: 'district stop',
+    aliases: ['distrito stop', 'ds'],
+    description: 'Sale del modo pintura de distrito',
+    usage: 'district stop',
+    execute(_args, state): [GameState, ReturnType<typeof ok>] {
+      return [state, ok('__DISTRICT_PAINT_OFF__\nModo pintura desactivado.')];
+    },
+  },
+  {
+    name: 'district rename',
+    aliases: ['distrito renombrar'],
+    description: 'Renombra un distrito',
+    usage: 'district rename <nombre-actual> <nuevo-nombre>',
+    execute(args, state): [GameState, ReturnType<typeof ok>] {
+      if (args.length < 2) return [state, err('Uso: district rename <nombre-actual> <nuevo-nombre>')];
+      const oldName = args[0];
+      const newName = args.slice(1).join(' ');
+      const d = findDistrictByName(state, oldName);
+      if (!d) return [state, err(`Distrito "${oldName}" no encontrado.`)];
+      const next = renameDistrict(state, d.id, newName);
+      return [next, ok(`Distrito renombrado: "${oldName}" → "${newName}"`)];
+    },
+  },
+  {
+    name: 'district delete',
+    aliases: ['distrito eliminar', 'dd'],
+    description: 'Elimina un distrito y sus políticas',
+    usage: 'district delete <nombre>',
+    execute(args, state): [GameState, ReturnType<typeof ok>] {
+      if (args.length < 1) return [state, err('Uso: district delete <nombre>')];
+      const name = args.join(' ');
+      const d = findDistrictByName(state, name);
+      if (!d) return [state, err(`Distrito "${name}" no encontrado.`)];
+      return [deleteDistrict(state, d.id), ok(`Distrito "${name}" eliminado.`)];
+    },
+  },
+  {
+    name: 'district policy tax',
+    aliases: ['distrito impuesto'],
+    description: 'Establece tasa de impuesto local para un distrito',
+    usage: 'district policy tax <nombre> <tasa%>',
+    execute(args, state): [GameState, ReturnType<typeof ok>] {
+      if (args.length < 2) return [state, err('Uso: district policy tax <nombre> <tasa%>')];
+      const name = args.slice(0, -1).join(' ');
+      const rate = parseIntArg(args[args.length - 1]);
+      if (rate === null || rate < 1 || rate > 30) return [state, err('Tasa inválida (1-30).')];
+      const d = findDistrictByName(state, name);
+      if (!d) return [state, err(`Distrito "${name}" no encontrado.`)];
+      const next = { ...state, districts: state.districts.map((x) =>
+        x.id === d.id ? { ...x, policies: { ...x.policies, taxRate: rate } } : x
+      )};
+      return [next, ok(`Tasa fiscal del distrito "${name}" fijada en ${rate}%.`)];
+    },
+  },
+  {
+    name: 'district policy ban',
+    aliases: ['distrito prohibir'],
+    description: 'Prohíbe un tipo de zona en un distrito',
+    usage: 'district policy ban <nombre> <tipo-zona>',
+    execute(args, state): [GameState, ReturnType<typeof ok>] {
+      if (args.length < 2) return [state, err('Uso: district policy ban <nombre> <tipo>')];
+      const zoneType = args[args.length - 1].toLowerCase() as import('../engine/types').ZoneType;
+      const name = args.slice(0, -1).join(' ');
+      const d = findDistrictByName(state, name);
+      if (!d) return [state, err(`Distrito "${name}" no encontrado.`)];
+      const banned = d.policies.bannedZones ?? [];
+      if (banned.includes(zoneType)) return [state, err(`"${zoneType}" ya está prohibido en "${name}".`)];
+      const next = { ...state, districts: state.districts.map((x) =>
+        x.id === d.id ? { ...x, policies: { ...x.policies, bannedZones: [...banned, zoneType] } } : x
+      )};
+      return [next, ok(`Zona "${zoneType}" prohibida en distrito "${name}".`)];
+    },
+  },
+  {
+    name: 'district policy priority',
+    aliases: ['distrito prioridad'],
+    description: 'Establece prioridad de gasto de un distrito (services|infrastructure|growth)',
+    usage: 'district policy priority <nombre> <services|infrastructure|growth>',
+    execute(args, state): [GameState, ReturnType<typeof ok>] {
+      if (args.length < 2) return [state, err('Uso: district policy priority <nombre> <prioridad>')];
+      const priority = args[args.length - 1].toLowerCase();
+      if (!['services', 'infrastructure', 'growth'].includes(priority)) {
+        return [state, err('Prioridad inválida. Usa: services, infrastructure o growth')];
+      }
+      const name = args.slice(0, -1).join(' ');
+      const d = findDistrictByName(state, name);
+      if (!d) return [state, err(`Distrito "${name}" no encontrado.`)];
+      const next = { ...state, districts: state.districts.map((x) =>
+        x.id === d.id ? { ...x, policies: { ...x.policies, spendingPriority: priority as import('../engine/types').SpendingPriority } } : x
+      )};
+      const labels: Record<string, string> = { services: 'Servicios (+20% radio)', infrastructure: 'Infraestructura (-20% mantenimiento)', growth: 'Crecimiento (+20% población)' };
+      return [next, ok(`Prioridad del distrito "${name}": ${labels[priority]}`)];
+    },
+  },
+  {
+    name: 'view districts',
+    aliases: ['distritos', 'district list'],
+    description: 'Muestra todos los distritos y sus políticas',
+    usage: 'view districts',
+    execute(_args, state): [GameState, ReturnType<typeof ok>] {
+      if (state.districts.length === 0) {
+        return [state, ok('Sin distritos. Usa "district create <nombre>" para crear uno.')];
+      }
+      const lines = ['=== DISTRITOS ==='];
+      for (const d of state.districts) {
+        lines.push(`${d.name} (${d.tileIds.length} tiles, color: ${d.color})`);
+        if (d.policies.taxRate !== undefined) lines.push(`  · Impuesto local: ${d.policies.taxRate}%`);
+        if (d.policies.spendingPriority) lines.push(`  · Prioridad: ${d.policies.spendingPriority}`);
+        if (d.policies.bannedZones?.length) lines.push(`  · Prohibido: ${d.policies.bannedZones.join(', ')}`);
+      }
+      return [state, ok(lines.join('\n'))];
     },
   },
 

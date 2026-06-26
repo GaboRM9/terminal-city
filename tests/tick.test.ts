@@ -28,6 +28,7 @@ function makeState(): GameState {
     history: [],
     avgPollution: 0,
     avgTrafficLoad: 0,
+    districts: [],
     rciDemand: { r: 50, c: 0, i: 0 },
     milestones: [],
     victory: false,
