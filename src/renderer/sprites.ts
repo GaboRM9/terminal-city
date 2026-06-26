@@ -532,10 +532,50 @@ const TOOLS_WORKSHOP: SpriteDef = {
   },
 };
 
+// ── Natural terrain sprites ────────────────────
+
+const MOUNTAIN: SpriteDef = {
+  rows: [
+    '....P...',
+    '...PMP..',
+    '..PMMMP.',
+    '.PMsMMP.',
+    'PMsMMMMP',
+    'MsMMMMsM',
+    'MMMMMMMM',
+    'GGGGGGGG',
+  ],
+  pal: {
+    P: '#dddddd', // snow peak
+    M: '#888888', // stone
+    s: '#aaaaaa', // light stone
+    G: '#555555', // ground base
+  },
+};
+
+const FOREST: SpriteDef = {
+  rows: [
+    '...G....',
+    '..GGG...',
+    '.GGGGG..',
+    'GGGGGGG.',
+    '.GGGGG..',
+    '..GTG...',
+    '..TTT...',
+    '.TTTTT..',
+  ],
+  pal: {
+    G: '#2d8a2d', // leaves
+    T: '#6b3a1f', // trunk
+  },
+};
+
 // ── Lookup tables ─────────────────────────────
 
 const BY_ZONE: Partial<Record<string, SpriteDef>> = {
   water: WATER,
+  mountain: MOUNTAIN,
+  forest: FOREST,
   road: ROAD,
   avenue: AVENUE,
   highway: HIGHWAY,

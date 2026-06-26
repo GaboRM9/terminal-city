@@ -15,7 +15,9 @@ const EMPTY_CONFIG: TileRenderConfig = { char: '.', color: '#1a1a1a' };
 
 const BASE_MAP: Record<ZoneType, TileRenderConfig> = {
   empty: EMPTY_CONFIG,
-  water: { char: '~', color: '#0055ff', bgColor: '#000022' },
+  water:    { char: '~', color: '#0055ff', bgColor: '#000022' },
+  mountain: { char: '▲', color: '#999999', bgColor: '#1a1a1a' },
+  forest:   { char: '♣', color: '#2d8a2d', bgColor: '#050f05' },
   road:    { char: '#', color: '#666666' },
   avenue:  { char: '=', color: '#66aaff' },
   highway: { char: '≡', color: '#9999cc' },
@@ -108,8 +110,10 @@ export function getMinimapConfig(tile: Tile): TileRenderConfig {
 
 /** Legend entries for the UI help panel */
 export const TILE_LEGEND: Array<{ type: ZoneType; char: string; label: string }> = [
-  { type: 'empty', char: '.', label: 'Vacío' },
-  { type: 'water', char: '~', label: 'Agua' },
+  { type: 'empty',    char: '.', label: 'Vacío' },
+  { type: 'water',    char: '~', label: 'Agua' },
+  { type: 'mountain', char: '▲', label: 'Montaña (no construible)' },
+  { type: 'forest',   char: '♣', label: 'Bosque (no construible)' },
   { type: 'road',    char: '#', label: 'Carretera' },
   { type: 'avenue',  char: '=', label: 'Avenida (3× capacidad)' },
   { type: 'highway', char: '≡', label: 'Autopista (10× capacidad)' },

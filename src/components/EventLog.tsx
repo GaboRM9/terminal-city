@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useGameStore } from '../store/gameStore';
 import type { LogEntry } from '../engine/types';
+import { UI } from '../i18n';
 
 // ─────────────────────────────────────────────
 //  Scrollable terminal event log
@@ -41,7 +42,8 @@ function LogLine({ entry }: { entry: LogEntry }): JSX.Element {
 
 /** Shows only auto-generated simulation events (tick engine output) */
 export function EventLog(): JSX.Element {
-  const { state } = useGameStore();
+  const { state, lang } = useGameStore();
+  const t = UI[lang];
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const simEntries = state.log.filter((e) => e.source === 'game');
@@ -72,8 +74,8 @@ export function EventLog(): JSX.Element {
           justifyContent: 'space-between',
         }}
       >
-        <span>SIMULACIÓN</span>
-        <span style={{ color: '#222' }}>{simEntries.length} eventos</span>
+        <span>{t.simHeader}</span>
+        <span style={{ color: '#222' }}>{t.simEvents(simEntries.length)}</span>
       </div>
       {simEntries.map((entry) => (
         <LogLine key={entry.id} entry={entry} />

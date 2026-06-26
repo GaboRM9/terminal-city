@@ -1,12 +1,14 @@
 import { create } from 'zustand';
 import type { GameState, LogEntry, ServiceType, SimulationSpeed, ZoneType } from '../engine/types';
-import { createWorld, demolishTile, recalculateRoadAccess, traceRoad, zoneTile } from '../engine/world';
+import { generateWorld, demolishTile, recalculateRoadAccess, traceRoad, zoneTile, NATURAL_TERRAIN } from '../engine/world';
 import { paintDistrictTile } from '../engine/districts';
 import { tick } from '../engine/tick';
 import { createDefaultEconomy, setServiceBudget, setTaxRate } from '../engine/economy';
 import { BALANCE } from '../data/balanceConfig';
 import { BUILDINGS } from '../data/buildings';
 import { createInitialMilestones } from '../data/milestoneDefs';
+import type { Lang } from '../i18n';
+import { setLangCache } from '../i18n';
 
 // ─────────────────────────────────────────────
 //  Zustand store — global game state + actions
@@ -22,7 +24,7 @@ function createInitialState(): GameState {
   return {
     worldWidth: WORLD_WIDTH,
     worldHeight: WORLD_HEIGHT,
-    tiles: createWorld(WORLD_WIDTH, WORLD_HEIGHT),
+    tiles: generateWorld(WORLD_WIDTH, WORLD_HEIGHT),
     year: 1,
     month: 1,
     economy: createDefaultEconomy(),
@@ -90,16 +92,18 @@ interface GameStore {
   state: GameState;
   actionHistory: GameState[];
 
+  // Language
+  lang: Lang;
+  setLang: (lang: Lang) => void;
+
   // Build mode UI state (not part of game state)
   buildTool: BuildTool | null;
   roadStart: { x: number; y: number } | null;
 
-  // Panel toggle: pixelgram | livestats | charts
-  showLivestats: boolean;
-  showCharts: boolean;
+  // Console tab + traffic overlay
+  consoleTab: 'console' | 'pixelgram' | 'livestats' | 'charts';
+  setConsoleTab: (tab: 'console' | 'pixelgram' | 'livestats' | 'charts') => void;
   showTraffic: boolean;
-  toggleLivestats: () => void;
-  toggleCharts: () => void;
   toggleTraffic: () => void;
 
   // District paint mode
@@ -153,13 +157,16 @@ function performTick(state: GameState): GameState {
 export const useGameStore = create<GameStore>((set, get) => ({
   state: createInitialState(),
   actionHistory: [],
+  lang: 'en',
+  setLang: (lang) => {
+    setLangCache(lang);
+    set({ lang });
+  },
   buildTool: null,
   roadStart: null,
-  showLivestats: false,
-  showCharts: false,
+  consoleTab: 'console',
+  setConsoleTab: (tab) => set({ consoleTab: tab }),
   showTraffic: false,
-  toggleLivestats: () => set((s) => ({ showLivestats: !s.showLivestats, showCharts: false })),
-  toggleCharts: () => set((s) => ({ showCharts: !s.showCharts, showLivestats: false })),
   toggleTraffic: () => set((s) => ({ showTraffic: !s.showTraffic })),
   districtPaintMode: null,
   setDistrictPaintMode: (id) => set({ districtPaintMode: id }),
@@ -279,8 +286,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     if (buildTool === 'demolish') {
       const tile = state.tiles[y * state.worldWidth + x];
-      if (tile?.type === 'empty') {
+      if (!tile || tile.type === 'empty') {
         get().addLog(`No hay nada que demoler en (${x},${y}).`, 'warning', 'system');
+        return;
+      }
+      if (NATURAL_TERRAIN.has(tile.type)) {
+        get().addLog(`El terreno natural (${tile.type}) no se puede demoler.`, 'warning', 'system');
         return;
       }
       set((s) => ({
@@ -314,6 +325,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
 
     // Zone or building placement (with optional density variant)
+    const clickedTile = state.tiles[y * state.worldWidth + x];
+    if (clickedTile && NATURAL_TERRAIN.has(clickedTile.type)) {
+      get().addLog(`No se puede construir en terreno natural (${clickedTile.type}).`, 'warning', 'system');
+      return;
+    }
+
     const densityInfo = parseDensityTool(buildTool);
     const effectiveZone = densityInfo ? densityInfo.zone : (buildTool as ZoneType);
     const densityCap = densityInfo?.cap;

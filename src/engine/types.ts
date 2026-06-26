@@ -5,6 +5,8 @@
 export type ZoneType =
   | 'empty'
   | 'water'
+  | 'mountain'
+  | 'forest'
   | 'road'
   | 'residential'
   | 'commercial'

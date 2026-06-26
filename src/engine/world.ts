@@ -6,6 +6,9 @@ import { buildDistrictMap } from './districts';
 //  World creation and tile manipulation
 // ─────────────────────────────────────────────
 
+/** Tile types that are natural terrain — cannot be built on or demolished */
+export const NATURAL_TERRAIN: ReadonlySet<ZoneType> = new Set(['water', 'mountain', 'forest']);
+
 function makeTile(x: number, y: number): Tile {
   return {
     x,
@@ -23,6 +26,7 @@ function makeTile(x: number, y: number): Tile {
   };
 }
 
+/** Flat empty world — used by seeds and tests */
 export function createWorld(width: number, height: number): GameState['tiles'] {
   const tiles: Tile[] = [];
   for (let y = 0; y < height; y++) {
@@ -30,6 +34,108 @@ export function createWorld(width: number, height: number): GameState['tiles'] {
       tiles.push(makeTile(x, y));
     }
   }
+  return tiles;
+}
+
+// ─────────────────────────────────────────────
+//  Procedural terrain generation
+// ─────────────────────────────────────────────
+
+/** Integer hash producing a pseudo-random float in [0, 1) */
+function hash2(ix: number, iy: number, seed: number): number {
+  let n = (seed | 0) + ix * 374761393 + iy * 668265263;
+  n = Math.imul(n ^ (n >>> 13), 1274126177);
+  n = n ^ (n >>> 16);
+  return (n >>> 0) / 0x100000000;
+}
+
+/** Bilinear smooth noise at real coordinates (nx, ny) */
+function smoothNoise(nx: number, ny: number, seed: number): number {
+  const xi = Math.floor(nx);
+  const yi = Math.floor(ny);
+  const xf = nx - xi;
+  const yf = ny - yi;
+  // Smoothstep
+  const ux = xf * xf * (3 - 2 * xf);
+  const uy = yf * yf * (3 - 2 * yf);
+  const v00 = hash2(xi,     yi,     seed);
+  const v10 = hash2(xi + 1, yi,     seed);
+  const v01 = hash2(xi,     yi + 1, seed);
+  const v11 = hash2(xi + 1, yi + 1, seed);
+  return v00 * (1 - ux) * (1 - uy)
+       + v10 * ux       * (1 - uy)
+       + v01 * (1 - ux) * uy
+       + v11 * ux       * uy;
+}
+
+/** Fractal Brownian Motion — sums `octaves` noise layers */
+function fbm(nx: number, ny: number, seed: number, octaves: number): number {
+  let value = 0;
+  let amplitude = 1;
+  let total = 0;
+  for (let i = 0; i < octaves; i++) {
+    const freq = 1 << i; // 1, 2, 4, 8 …
+    value += smoothNoise(nx * freq, ny * freq, seed + i * 3571) * amplitude;
+    total += amplitude;
+    amplitude *= 0.5;
+  }
+  return value / total;
+}
+
+/**
+ * Procedural world generation using layered 2D noise.
+ *
+ * Terrain classification per tile:
+ *   elevation < 0.28            → water  (lakes, rivers)
+ *   elevation > 0.78            → mountain (ridges, peaks)
+ *   moisture  > 0.62 AND
+ *     0.28 ≤ elevation ≤ 0.72   → forest  (wooded zones)
+ *   otherwise                   → empty buildable land
+ *
+ * @param seed  Integer seed — same seed always produces the same map.
+ *              Pass 0 / omit to get a random map each time.
+ */
+export function generateWorld(
+  width: number,
+  height: number,
+  seed = Math.floor(Math.random() * 0x7fffffff),
+): GameState['tiles'] {
+  const tiles: Tile[] = [];
+
+  // Two independent noise passes: elevation + moisture
+  const elevSeed = seed;
+  const moistSeed = seed ^ 0x6a09e667; // XOR with a constant to decorrelate
+
+  // Scale so features span ~6-8 tiles on a 40×20 map
+  const elevScale = 3.5;
+  const moistScale = 4.0;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const nx = x / width;
+      const ny = y / height;
+
+      const elev  = fbm(nx * elevScale, ny * elevScale, elevSeed, 4);
+      const moist = fbm(nx * moistScale, ny * moistScale, moistSeed, 3);
+
+      let type: ZoneType = 'empty';
+      if (elev < 0.28) {
+        type = 'water';
+      } else if (elev > 0.78) {
+        type = 'mountain';
+      } else if (moist > 0.62 && elev <= 0.72) {
+        type = 'forest';
+      }
+
+      const def = BUILDINGS.find((b) => b.type === type);
+      tiles.push({
+        ...makeTile(x, y),
+        type,
+        variant: def?.char ?? '.',
+      });
+    }
+  }
+
   return tiles;
 }
 
@@ -65,6 +171,8 @@ export function zoneTile(
 ): GameState {
   const tile = getTile(state, x, y);
   if (!tile) return state;
+  // Natural terrain is permanently unconstrucible
+  if (NATURAL_TERRAIN.has(tile.type)) return state;
 
   const building = BUILDINGS.find((b) => b.type === zone);
   const char = building?.char ?? '.';
@@ -167,7 +275,7 @@ export function getTilesInRadius(state: GameState, cx: number, cy: number, radiu
 /** Demolish a tile, restoring it to empty and refunding 40% of cost */
 export function demolishTile(state: GameState, x: number, y: number): GameState {
   const tile = getTile(state, x, y);
-  if (!tile || tile.type === 'empty') return state;
+  if (!tile || tile.type === 'empty' || NATURAL_TERRAIN.has(tile.type)) return state;
 
   const building = BUILDINGS.find((b) => b.type === tile.type);
   const refund = building ? Math.floor(building.cost * 0.4) : 0;

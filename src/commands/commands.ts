@@ -1,6 +1,6 @@
 import type { CommandDefinition, GameState, ServiceType, ZoneType } from '../engine/types';
 import { parseCoords, parseIntArg } from './parser';
-import { zoneTile, demolishTile, traceRoad, recalculateRoadAccess, setTile, getTile, repairTile } from '../engine/world';
+import { zoneTile, demolishTile, traceRoad, recalculateRoadAccess, setTile, getTile, repairTile, NATURAL_TERRAIN } from '../engine/world';
 import { setTaxRate, setServiceBudget, issueBond, computeBondRating } from '../engine/economy';
 import { pollutionLabel } from '../engine/pollution';
 import { trafficLabel } from '../engine/traffic';
@@ -70,6 +70,12 @@ export const COMMANDS: CommandDefinition[] = [
 
       if (!VALID_ZONES.has(zoneType)) {
         return [state, err(`Tipo de zona inválido: "${raw}". Usa: ${[...VALID_ZONES].join(', ')} (o con sufijo -low/-medium/-high)`)];
+      }
+
+      // Terrain tiles cannot be built on
+      const tileAtCoords = getTile(state, coords.x, coords.y);
+      if (tileAtCoords && NATURAL_TERRAIN.has(tileAtCoords.type)) {
+        return [state, err(`No se puede construir en terreno natural (${tileAtCoords.type}) en (${coords.x},${coords.y}).`)];
       }
 
       // Check district ban
@@ -237,6 +243,11 @@ export const COMMANDS: CommandDefinition[] = [
       const buildingType = args[2].toLowerCase() as ZoneType;
       if (!VALID_BUILDINGS.has(buildingType)) {
         return [state, err(`Edificio inválido: "${buildingType}". Usa: ${[...VALID_BUILDINGS].join(', ')}`)];
+      }
+
+      const buildTile = getTile(state, coords.x, coords.y);
+      if (buildTile && NATURAL_TERRAIN.has(buildTile.type)) {
+        return [state, err(`No se puede construir en terreno natural (${buildTile.type}) en (${coords.x},${coords.y}).`)];
       }
 
       const building = BUILDINGS.find((b) => b.type === buildingType);
