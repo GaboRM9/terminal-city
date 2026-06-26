@@ -179,6 +179,19 @@ export function applyRecession(state: GameState): GameState {
   };
 }
 
+/** Traffic jam when average road congestion exceeds 80% */
+function tryTrafficJamEvent(state: GameState): GameEvent | null {
+  if ((state.avgTrafficLoad ?? 0) < 80) return null;
+  if (state.tickCount % 6 !== 0) return null;
+
+  return makeEvent(
+    state.year,
+    state.month,
+    `¡Colapso de tráfico! Congestión promedio: ${state.avgTrafficLoad}%. Construye avenidas o autopistas para aumentar la capacidad vial.`,
+    'warning',
+  );
+}
+
 /** Smog warning when city-wide average pollution exceeds threshold */
 function trySmogWarningEvent(state: GameState): GameEvent | null {
   if (state.avgPollution < 60) return null;
@@ -274,6 +287,9 @@ export function generateEvents(state: GameState): [GameState, GameEvent[]] {
     events.push(smogEvt);
     next = applySmogWarning(next);
   }
+
+  const trafficEvt = tryTrafficJamEvent(next);
+  if (trafficEvt) events.push(trafficEvt);
 
   return [next, events];
 }

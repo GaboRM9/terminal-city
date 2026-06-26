@@ -2,6 +2,7 @@ import type { GameState, LogEntry } from './types';
 import { refreshCoverage } from './services';
 import { applyMonthlyEconomics, computeHappiness, processBondPayments } from './economy';
 import { computePollution, pollutionPopCapMultiplier } from './pollution';
+import { computeTraffic } from './traffic';
 import { evaluateProductionChains, isTierUnlocked } from './production';
 import { generateEvents } from './events';
 import { computeTotalPopulation } from './world';
@@ -152,6 +153,9 @@ export function tick(state: GameState): GameState {
   // 2b. Recompute pollution (uses updated tile types)
   next = computePollution(next);
 
+  // 2c. Recompute traffic congestion
+  next = computeTraffic(next);
+
   // 3. Evaluate production chains
   next = evaluateProductionChains(next);
 
@@ -162,7 +166,10 @@ export function tick(state: GameState): GameState {
   next = updatePopulation(next);
 
   // 5. Compute happiness
-  const happiness = computeHappiness(next);
+  let happiness = computeHappiness(next);
+  // Traffic congestion penalty
+  if (next.avgTrafficLoad >= 90) happiness = Math.max(0, happiness - 8);
+  else if (next.avgTrafficLoad >= 70) happiness = Math.max(0, happiness - 3);
   next = { ...next, happiness };
 
   // 6. Apply monthly economics

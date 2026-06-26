@@ -18,6 +18,7 @@ function makeTile(x: number, y: number): Tile {
     hasRoadAccess: false,
     pollution: 0,
     densityCap: 3,
+    trafficLoad: 0,
   };
 }
 
@@ -123,13 +124,12 @@ export function recalculateRoadAccess(state: GameState): GameState {
   const tiles = state.tiles.map((t) => ({ ...t, hasRoadAccess: false }));
 
   for (const tile of tiles) {
-    if (tile.type === 'road') {
+    if (tile.type === 'road' || tile.type === 'avenue' || tile.type === 'highway') {
       const neighbors = getNeighbors(state, tile.x, tile.y);
       for (const n of neighbors) {
         const idx = n.y * state.worldWidth + n.x;
         tiles[idx] = { ...tiles[idx], hasRoadAccess: true };
       }
-      // Road tiles have access to themselves
       const selfIdx = tile.y * state.worldWidth + tile.x;
       tiles[selfIdx] = { ...tiles[selfIdx], hasRoadAccess: true };
     }

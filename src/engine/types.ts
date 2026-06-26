@@ -24,7 +24,9 @@ export type ZoneType =
   | 'iron_mine'
   | 'foundry'
   | 'tools_workshop'
-  | 'waste_plant';
+  | 'waste_plant'
+  | 'avenue'
+  | 'highway';
 
 export type ServiceType = 'water' | 'electricity' | 'garbage' | 'police' | 'fire' | 'education' | 'health';
 
@@ -52,6 +54,8 @@ export interface Tile {
   pollution: number;
   /** Maximum zone level allowed on this tile (1=low, 2=medium, 3=high density) */
   densityCap: 1 | 2 | 3;
+  /** Traffic congestion 0–100 on road tiles (0 on non-road tiles) */
+  trafficLoad: number;
 }
 
 export interface Position {
@@ -204,6 +208,8 @@ export interface GameState {
   history: HistorySnapshot[];
   /** City-wide average pollution (0–100), recomputed each tick */
   avgPollution: number;
+  /** City-wide average road congestion (0–100), recomputed each tick */
+  avgTrafficLoad: number;
 }
 
 /** Command result returned to the UI */

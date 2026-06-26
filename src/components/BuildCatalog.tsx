@@ -62,7 +62,9 @@ const CATEGORIES: Category[] = [
     label: 'VÍAS',
     icon: '#',
     items: [
-      { tool: 'road', label: 'Carretera', cost: 10 },
+      { tool: 'road',    label: 'Carretera', cost: 10 },
+      { tool: 'avenue',  label: 'Avenida',   cost: 30 },
+      { tool: 'highway', label: 'Autopista', cost: 80 },
     ],
   },
   {

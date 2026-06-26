@@ -214,6 +214,36 @@ export const SCENARIOS: PostScenario[] = [
     ],
   },
 
+  // ── Traffic jam ──────────────────────────────────────────────
+  {
+    id: 'traffic_jam',
+    condition: (s) => (s.avgTrafficLoad ?? 0) >= 80,
+    weight: 8,
+    personalities: ['pessimist', 'political', 'neutral', 'funny'],
+    templates: [
+      tf((s) => `Congestión urbana al ${s.avgTrafficLoad ?? 0}%. Llegué al trabajo en taxi y tardé lo mismo a pie. Alguien construya una avenida ya 🚗`),
+      t('El tráfico está tan mal que los coches se mueven más despacio que yo caminando. Y yo camino despacio 🐢'),
+      t('Propuesta: renombrar la ciudad a "Terminal Parking". Es más honesto con la situación actual'),
+      t('Reunión de emergencia municipal: el alcalde llegó tarde. Por el tráfico. La ironía es demasiado intensa'),
+      t('Mi coche lleva 40 minutos en el mismo semáforo. Le he puesto nombre: La Trampa. Relación complicada'),
+      t('Si alguien del ayuntamiento lee esto: necesitamos avenidas. No pistas de baile, AVENIDAS. Con doble carril 🛣️'),
+    ],
+  },
+
+  // ── Clean traffic flow ────────────────────────────────────────
+  {
+    id: 'traffic_flow',
+    condition: (s) => (s.avgTrafficLoad ?? 0) < 30 && s.population >= 100,
+    weight: 3,
+    personalities: ['optimist', 'neutral'],
+    templates: [
+      t('Vine del centro al trabajo en 8 minutos. OCHO. Esta ciudad tiene algo especial 🚗💨'),
+      t('Las avenidas nuevas cambiaron todo. De una hora a quince minutos. Eso es planificación bien hecha'),
+      t('Tráfico fluido con 100+ vecinos. No creía que fuera posible. El alcalde hizo los deberes esta vez 🚦✅'),
+      t('La autopista del norte vacía a las 9am. Sigo sin creerlo. Parece que alguien leyó el plan de movilidad'),
+    ],
+  },
+
   // ── After fire event ─────────────────────────────────────────
   {
     id: 'after_fire',
