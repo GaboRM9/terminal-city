@@ -4,7 +4,7 @@ import type { Tile } from '../engine/types';
 //  Pixel car simulation — pure logic, no rendering
 // ─────────────────────────────────────────────
 
-export const TILE_SIZE = 18;
+export const TILE_SIZE = 24;
 export const RULER_W   = 22;
 export const RULER_H   = 14;
 export const CAR_COUNT = 10;
