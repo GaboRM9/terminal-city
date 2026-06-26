@@ -4,11 +4,11 @@
 
 export const BALANCE = {
   // Economy
-  startingBalance: 12_000,
+  startingBalance: 15_000,
   defaultTaxRate: 15,
   minTaxRate: 5,
   maxTaxRate: 30,
-  defaultServiceBudget: 200,
+  defaultServiceBudget: 100,
   maxServiceBudget: 2000,
   debtInterestRate: 0.03,
 
@@ -20,9 +20,12 @@ export const BALANCE = {
   commercialIncomeBase: 4,
   industrialIncomeBase: 3,
 
+  // Production chains
+  chainIncomePerBuilding: 50,
+
   // Population
   populationPerZoneLevel: 50,
-  basePopGrowth: 8,
+  basePopGrowth: 20,
   emigrationRate: 0.05,
 
   // Events

@@ -599,6 +599,152 @@ export function createSeed5(): GameState {
 }
 
 // ─────────────────────────────────────────────
+//  SEED 6 — "La Ciudad Vitrina"
+//  All 25 building types on one map.
+//  Año 8, Pop ~450, $45 000, Felicidad 70 %
+// ─────────────────────────────────────────────
+
+export function createSeed6(): GameState {
+  let s = baseState({
+    year: 8, month: 6, tickCount: 96,
+    economy: {
+      ...createDefaultEconomy(),
+      balance: 45_000, debt: 0,
+      lastIncome: 3_800, lastExpenses: 2_400,
+      taxRate: 16,
+      serviceBudgets: [
+        { service: 'water',       allocation: 400 },
+        { service: 'electricity', allocation: 400 },
+        { service: 'garbage',     allocation: 300 },
+        { service: 'police',      allocation: 350 },
+        { service: 'fire',        allocation: 350 },
+        { service: 'education',   allocation: 300 },
+        { service: 'health',      allocation: 300 },
+      ],
+      bonds: [],
+      bondDefaultRisk: 0,
+    },
+    rciDemand: { r: 20, c: 35, i: 45 },
+    milestones: doneMilestones(
+      ['first_road','first_residents','lights_on','first_business',
+       'first_tier2','hundred_residents','safe_city','production_chain','tier3_district'], 5, 3,
+    ),
+    log: [{
+      id: 'seed-6',
+      timestamp: 'Año 8, Mes 06',
+      message: 'SEED 6 — La Ciudad Vitrina. Los 25 tipos de edificios en un mapa. Todos los sistemas activos.',
+      severity: 'info', source: 'system',
+    }],
+  });
+
+  // ── Road network (placed first so fillZone / place skip them) ────────────
+  s = hLine(s,  0,  0, 39, 'highway');   // top highway
+  s = hLine(s,  7,  0, 39, 'avenue');    // mid avenue
+  s = hLine(s, 13,  0, 39, 'avenue');    // lower avenue
+  s = vLine(s,  0,  0, 19, 'avenue');    // left spine
+  s = vLine(s, 39,  0, 19, 'avenue');    // right spine
+  // vertical dividers — 3 segments each, skip avenue rows
+  for (const cx of [9, 19, 29]) {
+    s = vLine(s, cx,  1,  6, 'road');
+    s = vLine(s, cx,  8, 12, 'road');
+    s = vLine(s, cx, 14, 19, 'road');
+  }
+  // horizontal cross streets per zone (row 10 omitted in cols 30-38 — that area is water)
+  s = hLine(s,  3,  1,  8, 'road'); s = hLine(s,  3, 10, 18, 'road');
+  s = hLine(s,  3, 20, 28, 'road'); s = hLine(s,  3, 30, 38, 'road');
+  s = hLine(s, 10,  1,  8, 'road'); s = hLine(s, 10, 10, 18, 'road');
+  s = hLine(s, 10, 20, 28, 'road');
+  s = hLine(s, 16,  1,  8, 'road'); s = hLine(s, 16, 10, 18, 'road');
+  s = hLine(s, 16, 20, 28, 'road'); s = hLine(s, 16, 30, 38, 'road');
+
+  // ── NW: Dense residential (cols 1-8, rows 1-6) ──────────────────────────
+  s = fillZone(s,  1, 1,  8, 2, 'residential', 3,  6, 3);  // L3 high-density
+  s = fillZone(s,  1, 4,  8, 6, 'residential', 2,  3, 2);  // L2 medium
+
+  // ── NC-L: Residential + commercial mix (cols 10-18, rows 1-6) ───────────
+  s = fillZone(s, 10, 1, 18, 2, 'residential', 2,  3, 2);
+  s = fillZone(s, 10, 4, 18, 6, 'commercial',  3,  8, 3);  // L3 commercial
+
+  // ── NC-R: Commercial tiers + park strip (cols 20-28, rows 1-6) ──────────
+  s = fillZone(s, 20, 1, 28, 2, 'commercial', 2, 5, 2);    // L2
+  s = fillZone(s, 20, 4, 28, 5, 'commercial', 1, 3, 1);    // L1
+  for (let x = 20; x <= 28; x++) s = place(s, x, 6, 'park');
+
+  // ── NE: All 11 unique service buildings (cols 30-38, rows 1-6) ──────────
+  // Row 1: power × 2 | water × 2 | hospital × 2 | school | university | fire
+  s = place(s, 30, 1, 'power_plant');    s = place(s, 31, 1, 'power_plant');
+  s = place(s, 32, 1, 'water_pump');    s = place(s, 33, 1, 'water_pump');
+  s = place(s, 34, 1, 'hospital');      s = place(s, 35, 1, 'hospital');
+  s = place(s, 36, 1, 'school');        s = place(s, 37, 1, 'university');
+  s = place(s, 38, 1, 'fire_station');
+  // Row 2: police | waste | garbage | parks
+  s = place(s, 30, 2, 'police_station');
+  s = place(s, 31, 2, 'waste_plant');
+  s = place(s, 32, 2, 'garbage_depot');
+  for (let x = 33; x <= 38; x++) s = place(s, x, 2, 'park');
+  // Rows 4-6: L1 residential (residents served by the NE infrastructure)
+  s = fillZone(s, 30, 4, 38, 6, 'residential', 1, 2, 1);
+
+  // ── ML: Industrial L1 (cols 1-8, rows 8-12) ─────────────────────────────
+  s = fillZone(s, 1,  8, 8,  9, 'industrial', 1, 1, 1);
+  s = fillZone(s, 1, 11, 8, 12, 'industrial', 1, 1, 1);
+
+  // ── MC-L: Industrial L2 (cols 10-18, rows 8-12) ─────────────────────────
+  s = fillZone(s, 10,  8, 18,  9, 'industrial', 2, 2, 2);
+  s = fillZone(s, 10, 11, 18, 12, 'industrial', 2, 2, 2);
+
+  // ── MC-R: Industrial L3 (cols 20-28, rows 8-12) ─────────────────────────
+  s = fillZone(s, 20,  8, 28,  9, 'industrial', 3, 3, 3);
+  s = fillZone(s, 20, 11, 28, 12, 'industrial', 3, 3, 3);
+
+  // ── MR: Water lake (cols 30-38, rows 8-12) ──────────────────────────────
+  for (let y = 8; y <= 12; y++) {
+    for (let x = 30; x <= 38; x++) {
+      s = place(s, x, y, 'water');
+    }
+  }
+
+  // ── BL: Food production chain (cols 1-8, rows 14-19) ────────────────────
+  s = fillZone(s, 1, 14, 8, 15, 'farm', 1, 0, 1);          // farm fields
+  // Row 16: cross-street road already placed
+  s = place(s, 1, 17, 'granary');
+  s = place(s, 2, 17, 'mill');
+  s = place(s, 3, 17, 'bakery');
+  for (let x = 4; x <= 8; x++) s = place(s, x, 17, 'park'); // green buffer
+  s = fillZone(s, 1, 18, 8, 19, 'residential', 1, 1, 1);    // workers' housing
+
+  // ── BC: Iron chain + heavy industry (cols 10-18, rows 14-19) ─────────────
+  // Specific buildings placed BEFORE fillZone (fillZone skips non-empty tiles)
+  s = place(s, 10, 14, 'iron_mine');
+  s = place(s, 11, 14, 'foundry');
+  s = place(s, 12, 14, 'tools_workshop');
+  s = place(s, 10, 17, 'waste_plant');
+  s = place(s, 11, 17, 'garbage_depot');
+  s = place(s, 12, 17, 'power_plant');   // south coverage backup
+  s = place(s, 13, 17, 'water_pump');
+  s = fillZone(s, 10, 14, 18, 15, 'industrial', 2, 1, 2);
+  s = fillZone(s, 10, 17, 18, 19, 'industrial', 1, 1, 1);
+
+  // ── BR-L: Commercial L1 + parks + residential (cols 20-28, rows 14-19) ───
+  s = fillZone(s, 20, 14, 28, 15, 'commercial', 1, 2, 1);
+  for (let x = 20; x <= 28; x++) s = place(s, x, 17, 'park');
+  s = fillZone(s, 20, 18, 28, 19, 'residential', 1, 1, 1);
+
+  // ── BR-R: Residential L1/L2 + south service cluster (cols 30-38, rows 14-19)
+  s = fillZone(s, 30, 14, 38, 15, 'residential', 2, 3, 2);
+  s = fillZone(s, 30, 17, 38, 18, 'residential', 1, 1, 1);
+  // Row 19: south utility strip
+  s = place(s, 30, 19, 'power_plant');
+  s = place(s, 31, 19, 'water_pump');
+  s = place(s, 32, 19, 'fire_station');
+  s = place(s, 33, 19, 'police_station');
+  s = place(s, 34, 19, 'school');
+  for (let x = 35; x <= 38; x++) s = place(s, x, 19, 'park');
+
+  return finalise(s, 450, 70);
+}
+
+// ─────────────────────────────────────────────
 //  Export map — used by the `seed` command
 // ─────────────────────────────────────────────
 
@@ -608,6 +754,7 @@ export const SEED_FACTORIES: Record<number, () => GameState> = {
   3: createSeed3,
   4: createSeed4,
   5: createSeed5,
+  6: createSeed6,
 };
 
 export const SEED_LABELS: Record<number, string> = {
@@ -616,4 +763,5 @@ export const SEED_LABELS: Record<number, string> = {
   3: '#3  La Metrópolis Congestionada — Año 10, ~520 hab, $22 000, 52 % (tráfico colapsado)',
   4: '#4  La Crisis Fiscal          — Año 14, ~140 hab, $1 800,  32 % (quiebra inminente)',
   5: '#5  Casi la Victoria          — Año 10, ~510 hab, $26 500, 78 % (1 tick = ganar)',
+  6: '#6  La Ciudad Vitrina         — Año 8,  ~450 hab, $45 000, 70 % (todos los 25 edificios)',
 };

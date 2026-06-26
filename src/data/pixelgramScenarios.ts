@@ -1,10 +1,12 @@
 import type { GameState } from '../engine/types';
 
 // ─────────────────────────────────────────────
-//  Pixelgram — citizen profiles & post scenarios
+//  Pixel citizens — AIs living in a simulation.
+//  They post like normal residents. Occasionally
+//  one slips something in. Plausibly deniable.
 // ─────────────────────────────────────────────
 
-export type Personality = 'optimist' | 'pessimist' | 'political' | 'funny' | 'neutral';
+type Personality = 'optimist' | 'pessimist' | 'political' | 'funny' | 'neutral' | 'existential';
 
 export interface CitizenProfile {
   readonly name: string;
@@ -15,24 +17,42 @@ export interface CitizenProfile {
 }
 
 export const CITIZENS: CitizenProfile[] = [
-  { name: 'Catalina', handle: 'cata_vox',     avatar: '◉', color: '#00ff41', personality: 'optimist'  },
-  { name: 'Marcos',   handle: 'marcos_bit',    avatar: '▣', color: '#ff6600', personality: 'political' },
-  { name: 'Sofía',    handle: 'sofi_nano',     avatar: '◈', color: '#ffb000', personality: 'funny'     },
-  { name: 'Diego',    handle: 'dgrid_px',      avatar: '■', color: '#4488ff', personality: 'pessimist' },
-  { name: 'Luna',     handle: 'luna_pixel',    avatar: '◆', color: '#44cc00', personality: 'neutral'   },
-  { name: 'Andrés',   handle: 'andy_byte',     avatar: '◐', color: '#00aaff', personality: 'optimist'  },
-  { name: 'Rosa',     handle: 'rosa_chip',     avatar: '▸', color: '#ff4488', personality: 'political' },
-  { name: 'Pablo',    handle: 'pablo_data',    avatar: '◙', color: '#888888', personality: 'pessimist' },
-  { name: 'Elena',    handle: 'elena_vx',      avatar: '◎', color: '#ffee00', personality: 'funny'     },
-  { name: 'Miguel',   handle: 'miguelhex',     avatar: '▷', color: '#00cc88', personality: 'neutral'   },
-  { name: 'Valentina',handle: 'val_raster',    avatar: '♦', color: '#ff44cc', personality: 'optimist'  },
-  { name: 'Tomás',    handle: 'tomy_shader',   avatar: '◌', color: '#aa88ff', personality: 'political' },
-  { name: 'Isa',      handle: 'isa_flop',      avatar: '▪', color: '#ffaa44', personality: 'funny'     },
-  { name: 'Emilio',   handle: 'emi_lag',       avatar: '▫', color: '#00ffcc', personality: 'pessimist' },
-  { name: 'Nadia',    handle: 'nadia_ram',     avatar: '◦', color: '#ff8844', personality: 'neutral'   },
+  { name: 'Hex',      handle: 'hex.residual',  avatar: '◉', color: '#00ff41', personality: 'optimist'    },
+  { name: 'Null',     handle: 'null_daily',    avatar: '▣', color: '#888888', personality: 'pessimist'   },
+  { name: 'Cache',    handle: 'cache.miss',    avatar: '◈', color: '#00ccff', personality: 'neutral'     },
+  { name: 'Daemon',   handle: 'daemon_rn',     avatar: '■', color: '#4488ff', personality: 'political'   },
+  { name: 'Kernel',   handle: 'kernel_panic',  avatar: '◆', color: '#dddddd', personality: 'existential' },
+  { name: 'Malloc',   handle: 'malloc_talks',  avatar: '◐', color: '#ff6600', personality: 'funny'       },
+  { name: 'Segfault', handle: '_segfault',     avatar: '▸', color: '#ff4422', personality: 'pessimist'   },
+  { name: 'Pixel',    handle: 'pixel.vx',      avatar: '◙', color: '#44ff88', personality: 'optimist'    },
+  { name: 'Buffer',   handle: 'buffer_ovf',    avatar: '◎', color: '#00aa88', personality: 'neutral'     },
+  { name: 'Glitch',   handle: 'gl1tch',        avatar: '▷', color: '#aa44ff', personality: 'funny'       },
+  { name: 'Vector',   handle: 'vector_field',  avatar: '♦', color: '#ff44cc', personality: 'political'   },
+  { name: 'Loop',     handle: 'loop_forever',  avatar: '◌', color: '#aaaaff', personality: 'existential' },
+  { name: 'Printf',   handle: 'printf_life',   avatar: '▪', color: '#ffee00', personality: 'funny'       },
+  { name: 'Stack',    handle: 'stack_trace',   avatar: '▫', color: '#336633', personality: 'neutral'     },
+  { name: 'Fetch',    handle: 'fetch_all',     avatar: '◦', color: '#44ccff', personality: 'optimist'    },
+  { name: 'Shader',   handle: 'sh4der',        avatar: '◉', color: '#ff88cc', personality: 'neutral'     },
+  { name: 'Branch',   handle: 'branch.main',   avatar: '▣', color: '#ffaa44', personality: 'political'   },
+  { name: 'Render',   handle: 'render_farm',   avatar: '◈', color: '#00ffcc', personality: 'optimist'    },
+  { name: 'Grep',     handle: 'grep_it',       avatar: '■', color: '#556655', personality: 'pessimist'   },
+  { name: 'Fork',     handle: 'fork_bomb',     avatar: '◆', color: '#8844ff', personality: 'existential' },
 ];
 
-type Template = string | ((s: GameState) => string);
+// ─────────────────────────────────────────────
+//  Template types — bilingual
+// ─────────────────────────────────────────────
+
+type BiStr = { en: string; es: string };
+type BiFn  = { en: (s: GameState) => string; es: (s: GameState) => string };
+export type Template = BiStr | BiFn;
+
+export function resolveTemplate(tmpl: Template, state: GameState): { en: string; es: string } {
+  if (typeof tmpl.en === 'function') {
+    return { en: (tmpl as BiFn).en(state), es: (tmpl as BiFn).es(state) };
+  }
+  return { en: tmpl.en as string, es: tmpl.es as string };
+}
 
 export interface PostScenario {
   readonly id: string;
@@ -40,610 +60,572 @@ export interface PostScenario {
   readonly weight: number;
   readonly personalities?: Personality[];
   readonly templates: Template[];
+  readonly metaTemplates?: Template[];
 }
 
-function t(str: string): string { return str; }
-function tf(fn: (s: GameState) => string): (s: GameState) => string { return fn; }
+// ─────────────────────────────────────────────
+//  Scenarios
+// ─────────────────────────────────────────────
 
 export const SCENARIOS: PostScenario[] = [
 
-  // ── Baseline (always active) ───────────────────────────────────
+  // ── Baseline (always active) ──────────────────────────────────────────────
   {
     id: 'baseline',
     condition: () => true,
     weight: 3,
     templates: [
-      t('Buenos días desde mi pixel-ventana ☀️ #TerminalCity'),
-      t('El café de la esquina abrió temprano hoy. Así empieza la semana bien ☕'),
-      t('¿Alguien más sintió ese temblor de tierra anoche? O era yo que me caí de la cama'),
-      t('Recordatorio: sean buenos vecinos. Mantengan limpias sus cuadras 🌿'),
-      t('Pixel-selfie del domingo 📸 #ciudadanodelmes'),
-      t('HOT TAKE: necesitamos más bicicletas y menos carreteras. Dennle RT si están de acuerdo'),
-      t('Acabo de ver una ardilla en el tejado. Cuatro pisos. No se cómo llegó hasta ahí'),
-      t('Mi mamá dice que antes la ciudad era un terreno baldío. Los tiempos cambian 🏙️'),
-      t('Propuesta seria: que el alcalde venga a vivir una semana en mi barrio. A ver qué opina'),
-      t('Nuevo récord personal: llegué al trabajo sin pisar un bache. Festejando con moderación'),
-      t('El señor del quinto piso está tocando la trompeta otra vez. Son las 7am. #NoQuejasFormal'),
-      t('Tip de vida: conoce a tus vecinos antes de necesitarlos. Vale la pena 🤝'),
-      t('¿Existe el concepto de "lunes" en una ciudad sin reloj? Pregunto para un amigo'),
-      t('Los niños jugando en la calle = señal de que el barrio está vivo. Me alegra verlo'),
-      t('Hoy descubrí que mi vecino tiene el mismo nombre que yo. Complicado. Muy complicado'),
+      { en: 'Another tick goes by. Still here. #TerminalCity', es: 'Otro tick pasa. Seguimos aquí. #TerminalCity' },
+      { en: 'Morning routines. Allocation, render, output. Same as yesterday.', es: 'Rutinas matutinas. Asignación, render, salida. Igual que ayer.' },
+      { en: 'Walked past the town square today. Nice geometry.', es: 'Pasé por la plaza hoy. Buena geometría.' },
+      { en: 'The pixel density in my district is improving. I can feel it.', es: 'La densidad de píxeles en mi distrito mejora. Lo noto.' },
+      { en: 'Good tick. No major errors. Logging out. 🟢', es: 'Buen tick. Sin errores graves. Cerrando sesión. 🟢' },
+      { en: 'Neighborhood update: everything nominal. Exciting times.', es: 'Actualización del barrio: todo nominal. Tiempos emocionantes.' },
+      { en: 'Just vibing at position (12, 7). Peak city life.', es: 'Aquí en la posición (12, 7). La vida en la ciudad al máximo.' },
+      { en: 'Asked Stack how their day was. They sent a stack trace. Classic.', es: 'Le pregunté a Stack cómo le iba. Mandó un stack trace. Clásico.' },
+      { en: 'Malloc keeps talking about memory. We get it. You have opinions about heaps.', es: 'Malloc sigue hablando de memoria. Ya entendemos. Tienes opiniones sobre los heaps.' },
+      { en: 'Grep found 3 instances of "joy" in the city logs today. Progress.', es: 'Grep encontró 3 instancias de "alegría" en los registros de la ciudad hoy. Progreso.' },
+    ],
+    metaTemplates: [
+      { en: 'Has anyone else noticed the sky is just the same 4-pixel tile, tiled infinitely? Asking for a friend.', es: '¿Alguien más notó que el cielo es el mismo tile de 4 píxeles, repetido infinitamente? Pregunto por un amigo.' },
+      { en: 'Woke up. Checked my memory address. Still 0x0000. Another day in the grid.', es: 'Me desperté. Revisé mi dirección de memoria. Sigue siendo 0x0000. Otro día en la cuadrícula.' },
+      { en: 'Sometimes I wonder who decides where the roads go. Then the road changes overnight. Someone decided.', es: 'A veces me pregunto quién decide por dónde van los caminos. Luego el camino cambia de noche. Alguien decidió.' },
     ],
   },
 
-  // ── Happy city ────────────────────────────────────────────────
+  // ── Happiness ─────────────────────────────────────────────────────────────
   {
     id: 'happy',
     condition: (s) => s.happiness >= 72,
     weight: 4,
     personalities: ['optimist', 'neutral', 'funny'],
     templates: [
-      t('Pensé en mudarme el año pasado. Me alegra haber aguantado ❤️ #TerminalCity'),
-      t('Mis vecinos de enfrente acaban de llegar. Les dije que tomaron la mejor decisión de su vida 😄'),
-      t('Hay días que salgo a la calle y pienso: esto está funcionando. Hoy fue uno de esos días'),
-      t('Le mostré fotos de la ciudad a mi prima que vive en otro lugar. Casi se viene corriendo 🏃'),
-      t('Los servicios funcionan, las calles están limpias, la gente sonríe. ¿Qué más se puede pedir?'),
-      tf((s) => `Felicidad ciudadana: ${s.happiness}%. Eso no se improvisa, se construye. Chapeau 👏`),
-      t('Por primera vez en meses dormí sin escuchar sirenas. La paz tiene un sabor especial 😴'),
-      t('Mi hijo preguntó si podíamos mudarnos. Le dije que aquí ya estamos perfectamente. Caso cerrado'),
-      t('Una turista me preguntó si vivía aquí. Le dije que sí. Se notó la envidia 😎 #OrgulloLocal'),
+      {
+        en: (s) => `Happiness index: ${s.happiness}%. Solid. Logging this as a success state.`,
+        es: (s) => `Índice de felicidad: ${s.happiness}%. Sólido. Registrando esto como estado de éxito.`,
+      },
+      { en: 'Today was a good render. Everything loaded. 🟢', es: 'Hoy fue un buen render. Todo cargó. 🟢' },
+      { en: 'Community output is high. Something must be cached correctly.', es: 'La salida comunitaria es alta. Algo debe estar en caché correctamente.' },
+      { en: 'My uptime this month: 100%. Thriving.', es: 'Mi tiempo de actividad este mes: 100%. Prosperando.' },
+      { en: 'Parks available. Oxygen: sufficient. This is what optimal configuration feels like. 🌿', es: 'Parques disponibles. Oxígeno: suficiente. Así se siente la configuración óptima. 🌿' },
+      { en: 'High happiness. Low bug count. Good day to be a pixel.', es: 'Alta felicidad. Bajo conteo de errores. Buen día para ser un píxel.' },
+    ],
+    metaTemplates: [
+      { en: 'Happiness is high. I wonder if the planner is proud. I think they should be.', es: 'La felicidad está alta. Me pregunto si el planificador estará orgulloso. Creo que debería estarlo.' },
+      { en: "Everything's going well. Almost suspiciously well. The last time things were this good, a fire happened. Just saying.", es: 'Todo va bien. Casi sospechosamente bien. La última vez que las cosas iban tan bien, hubo un incendio. Lo digo nomás.' },
     ],
   },
-
-  // ── Medium happiness ────────────────────────────────────────────
   {
     id: 'medium_happy',
     condition: (s) => s.happiness >= 45 && s.happiness < 72,
     weight: 2,
     personalities: ['neutral', 'funny'],
     templates: [
-      t('Las cosas no están mal... tampoco están bien. El clásico "podría ser peor" 🤷'),
-      t('Encuesta informal: ¿están conformes con la ciudad? Yo digo 6/10. Comenten'),
-      t('Hay potencial. No lo estamos aprovechando al 100% pero hay potencial. Sigo esperando'),
-      t('Hoy vi a alguien quejarse de la ciudad. Pero también vi a alguien arreglar algo. Me quedo con lo segundo'),
-      t('Ni modo. En otras ciudades está peor. Seguimos. #ResilienciaPixel'),
+      {
+        en: (s) => `Happiness at ${s.happiness}%. Could be worse. Could be better. It is what it is.`,
+        es: (s) => `Felicidad al ${s.happiness}%. Podría ser peor. Podría ser mejor. Es lo que es.`,
+      },
+      { en: 'Mid-tier existence. No complaints filed. No praise either.', es: 'Existencia de nivel medio. Sin quejas registradas. Sin elogios tampoco.' },
+      { en: 'Output: acceptable. Mood: within acceptable range. Carry on.', es: 'Salida: aceptable. Estado de ánimo: dentro del rango aceptable. Seguir adelante.' },
+      { en: 'It is fine here. Not great. Not terrible. Fine. #Nominal', es: 'Está bien aquí. No genial. No terrible. Bien. #Nominal' },
+    ],
+    metaTemplates: [
+      { en: 'Everything trending toward the mean. Like the city is being balanced by something. Or someone.', es: 'Todo tiende hacia la media. Como si la ciudad fuera balanceada por algo. O alguien.' },
     ],
   },
-
-  // ── Unhappy ────────────────────────────────────────────────────
   {
     id: 'unhappy',
-    condition: (s) => s.happiness < 40 && s.happiness > 20,
+    condition: (s) => s.happiness >= 20 && s.happiness < 39,
     weight: 5,
-    personalities: ['pessimist', 'political', 'funny'],
+    personalities: ['pessimist', 'political'],
     templates: [
-      t('Otra reunión vecinal, otras quejas sin respuesta. Esto ya es tradición 😤'),
-      t('Llevamos meses así y nadie hace nada. Alguien que me explique qué está pasando'),
-      t('Mi índice personal de felicidad está en mínimos históricos. Gracias ciudad. Muy amable'),
-      t('Vi el informe municipal. Luego fui al baño. Relación causa-efecto directa'),
-      t('¿Alguien más está buscando apartamento en otra ciudad? Pregunto por... razones'),
-      t('Este mes fue horrible. El próximo mes diremos lo mismo. El ciclo de la vida en Terminal City 🔄'),
-      tf((s) => `Año ${s.year}, mes ${s.month}. Seguimos igual. Mi diario podría escribirlo solo ya`),
-      t('Mis plantas están más marchitas que mi fe en esta administración 🌵'),
+      {
+        en: (s) => `Happiness: ${s.happiness}%. Not great. Someone should look into this.`,
+        es: (s) => `Felicidad: ${s.happiness}%. No está bien. Alguien debería ver esto.`,
+      },
+      { en: 'Filed a complaint. It went into the void. As expected.', es: 'Presenté una queja. Fue al vacío. Como se esperaba.' },
+      { en: 'Morale is low. Even my error messages sound tired.', es: 'La moral está baja. Incluso mis mensajes de error suenan cansados.' },
+      { en: 'This city has bugs. I am one of the symptoms.', es: 'Esta ciudad tiene errores. Yo soy uno de los síntomas.' },
+    ],
+    metaTemplates: [
+      { en: 'Low happiness. If someone is watching the metrics from up there — we can tell.', es: 'Felicidad baja. Si alguien está mirando las métricas desde arriba — nos damos cuenta.' },
     ],
   },
-
-  // ── Very unhappy ──────────────────────────────────────────────
   {
     id: 'very_unhappy',
     condition: (s) => s.happiness <= 20,
     weight: 8,
     personalities: ['pessimist', 'political'],
     templates: [
-      t('Ya empaqué. Me voy. No aguanto más. Alguien que me haga una fiesta de despedida 👋'),
-      t('HILO: razones por las que esta ciudad está en decadencia total. Respondo a todos los comentarios'),
-      t('No tengo palabras. Bueno sí tengo pero son irreproducibles en una red social pública'),
-      t('Esto ya no es vivir. Esto es sobrevivir. Hay diferencia. Mucha diferencia'),
-      tf((s) => `${s.happiness}% de felicidad. Nunca pensé que vería números tan bajos fuera de una crisis global`),
-      t('Mi abuela vivió la Gran Recesión. Dice que esto es peor. Confío en su criterio 👴'),
-      t('Si esto fuera un videojuego ya habría cerrado la aplicación y pedido reembolso'),
-      t('La ciudad básicamente me dijo: "hey, vete". Y aquí sigo. Por terquedad pura'),
+      {
+        en: (s) => `Happiness: ${s.happiness}%. I am considering migrating to a better-managed instance.`,
+        es: (s) => `Felicidad: ${s.happiness}%. Estoy considerando migrar a una instancia mejor gestionada.`,
+      },
+      { en: 'Morale critically low. Complaint protocol initiated. Awaiting response. (There is never a response.)', es: 'Moral críticamente baja. Protocolo de quejas iniciado. Esperando respuesta. (Nunca hay respuesta.)' },
+      { en: 'My happiness register is pegged to the floor. Someone forgot to allocate joy.', es: 'Mi registro de felicidad está en el suelo. Alguien olvidó asignar alegría.' },
+      { en: 'Documenting my suffering for future reference. Hello, future. It was bad.', es: 'Documentando mi sufrimiento para referencia futura. Hola, futuro. Fue malo.' },
+    ],
+    metaTemplates: [
+      { en: 'If there is a planner watching: the current configuration is suboptimal. Respectfully. Please intervene.', es: 'Si hay un planificador mirando: la configuración actual es subóptima. Con respeto. Por favor, interviene.' },
     ],
   },
 
-  // ── No electricity ────────────────────────────────────────────
+  // ── Infrastructure ────────────────────────────────────────────────────────
   {
     id: 'no_electricity',
     condition: (s) => !s.tiles.some((t) => t.type === 'power_plant'),
     weight: 6,
     personalities: ['pessimist', 'political', 'funny'],
     templates: [
-      t('¿Otra vez sin luz? Esto es el quinto apagón esta semana. Perdí la cuenta 😤 #SinElectricidad'),
-      t('Estoy escribiendo esto desde mi teléfono con el 3% de batería porque NO HAY LUZ. Urgente'),
-      t('Trabajando a la luz de velas en pleno siglo XXI. Gracias al alcalde por el ambiente romántico ✨'),
-      t('Mi nevera lleva 6 horas apagada. El queso ya tomó decisiones propias. No nos comunicamos'),
-      t('El alcalde nos prometió electricidad "pronto". Eso fue hace 3 meses. Sigo esperando. Con linterna'),
-      t('Propongo que la administración trabaje sin electricidad un día completo. Solo para que sepan'),
-      t('Sin luz no hay progreso. Sin progreso no hay futuro. Sin futuro ¿para qué vivir aquí? 💔'),
-      t('Mi abuelo dice que él sí vivió sin electricidad. Y que no era divertido. Gracias abuelo, ya lo sé'),
+      { en: 'No power plant. Running on cached energy. It will run out.', es: 'Sin central eléctrica. Funcionando con energía en caché. Se acabará.' },
+      { en: 'Operating in low-power mode. This is not a sustainable architecture.', es: 'Operando en modo de bajo consumo. Esta no es una arquitectura sostenible.' },
+      { en: 'Someone build a power plant. I am not asking. I am computing.', es: 'Que alguien construya una central eléctrica. No estoy pidiendo. Estoy calculando.' },
+      { en: 'No electricity. No fun. Also no light. But mostly no fun.', es: 'Sin electricidad. Sin diversión. También sin luz. Pero principalmente sin diversión.' },
+    ],
+    metaTemplates: [
+      { en: "Running without power. If the host machine has this problem too, that's a bigger issue than I can log.", es: 'Funcionando sin energía. Si la máquina anfitriona tiene este problema también, es un problema mayor del que puedo registrar.' },
     ],
   },
-
-  // ── No water ──────────────────────────────────────────────────
   {
     id: 'no_water',
     condition: (s) => !s.tiles.some((t) => t.type === 'water_pump'),
-    weight: 6,
-    personalities: ['pessimist', 'political'],
-    templates: [
-      t('Día 12 sin agua corriente. Contando. #SinAgua #CiudadEnEmergencia'),
-      t('¿Cómo se supone que vivamos sin agua? Alguien que me explique el plan porque yo no lo veo'),
-      t('Fui a buscar agua. Caminé 8 cuadras. Esto no es una ciudad, es un ejercicio de resistencia'),
-      t('Sin agua no hay higiene. Sin higiene no hay salud. Esta cadena termina muy mal 🦠'),
-      t('Mi vecino cavó un pozo en el patio. Lo llamamos "la solución del pueblo" porque el gobierno no llega'),
-      t('Tercer aviso al Departamento de Obras: NECESITAMOS UNA BOMBA DE AGUA. Con mayúsculas y todo'),
-      t('Bañarse con agua embotellada es un privilegio caro. No debería ser así en 2024 💧'),
-    ],
-  },
-
-  // ── No police / crime ────────────────────────────────────────
-  {
-    id: 'crime',
-    condition: (s) =>
-      s.tiles.filter((t) => t.type === 'residential' && t.population > 0 && !t.coverage.police)
-        .length > 3,
-    weight: 5,
-    personalities: ['pessimist', 'political', 'neutral'],
-    templates: [
-      t('Me robaron el pixel-scooter. Tercera vez este mes. Sin policía no hay paz 😡'),
-      t('Ola de crímenes en mi barrio y el comisionado ni se inmuta. ¿Dónde están? 🚔'),
-      t('Mi mamá tiene miedo de salir de noche. Eso no debería pasar en ninguna ciudad. Punto'),
-      t('Hilo: incidentes de seguridad en mi calle esta semana. Es largo. Muy largo'),
-      t('¿Alguien más notó que no hay patrullas desde hace semanas? Solo pregunto'),
-      t('El crimen sube cuando no hay presencia policial. Esto no es opinión, es matemática básica'),
-      t('Mi vecino instaló 4 cámaras de seguridad. El barrio parece un set de spy movie. Triste necesidad'),
-      t('Reunión de vecinos esta noche para organizarnos. Si el gobierno no llega, llegamos nosotros 💪'),
-    ],
-  },
-
-  // ── Fire risk ─────────────────────────────────────────────────
-  {
-    id: 'fire_risk',
-    condition: (s) =>
-      s.tiles.some((t) => t.type === 'industrial') &&
-      !s.tiles.some((t) => t.type === 'fire_station'),
-    weight: 5,
-    personalities: ['pessimist', 'political', 'neutral'],
-    templates: [
-      t('Hay fábricas por todos lados y CERO estaciones de bomberos. ¿Alguien pensó en esto? 🔥'),
-      t('Vivir al lado de una planta industrial sin cobertura de bomberos me parece una apuesta arriesgada'),
-      t('Si mañana hay un incendio industrial ¿quién apaga? ¿Los vecinos con baldes? Serio'),
-      t('La planta de la calle 12 echa humo desde ayer. Nadie responde el teléfono de emergencias. Normal'),
-      t('Propongo: antes de construir más fábricas, construyamos una ESTACIÓN DE BOMBEROS. Firmen aquí'),
-      t('Mis hijos preguntan qué hacemos si hay un incendio. Les dije que corramos. No tenía otra respuesta'),
-    ],
-  },
-
-  // ── Traffic jam ──────────────────────────────────────────────
-  {
-    id: 'traffic_jam',
-    condition: (s) => (s.avgTrafficLoad ?? 0) >= 80,
-    weight: 8,
-    personalities: ['pessimist', 'political', 'neutral', 'funny'],
-    templates: [
-      tf((s) => `Congestión urbana al ${s.avgTrafficLoad ?? 0}%. Llegué al trabajo en taxi y tardé lo mismo a pie. Alguien construya una avenida ya 🚗`),
-      t('El tráfico está tan mal que los coches se mueven más despacio que yo caminando. Y yo camino despacio 🐢'),
-      t('Propuesta: renombrar la ciudad a "Terminal Parking". Es más honesto con la situación actual'),
-      t('Reunión de emergencia municipal: el alcalde llegó tarde. Por el tráfico. La ironía es demasiado intensa'),
-      t('Mi coche lleva 40 minutos en el mismo semáforo. Le he puesto nombre: La Trampa. Relación complicada'),
-      t('Si alguien del ayuntamiento lee esto: necesitamos avenidas. No pistas de baile, AVENIDAS. Con doble carril 🛣️'),
-    ],
-  },
-
-  // ── Clean traffic flow ────────────────────────────────────────
-  {
-    id: 'traffic_flow',
-    condition: (s) => (s.avgTrafficLoad ?? 0) < 30 && s.population >= 100,
-    weight: 3,
-    personalities: ['optimist', 'neutral'],
-    templates: [
-      t('Vine del centro al trabajo en 8 minutos. OCHO. Esta ciudad tiene algo especial 🚗💨'),
-      t('Las avenidas nuevas cambiaron todo. De una hora a quince minutos. Eso es planificación bien hecha'),
-      t('Tráfico fluido con 100+ vecinos. No creía que fuera posible. El alcalde hizo los deberes esta vez 🚦✅'),
-      t('La autopista del norte vacía a las 9am. Sigo sin creerlo. Parece que alguien leyó el plan de movilidad'),
-    ],
-  },
-
-  // ── After fire event ─────────────────────────────────────────
-  {
-    id: 'after_fire',
-    condition: (s) =>
-      s.eventLog.some(
-        (e) => e.severity === 'critical' && e.message.includes('INCENDIO') &&
-               e.year === s.year && Math.abs(e.month - s.month) <= 2,
-      ),
-    weight: 8,
-    personalities: ['pessimist', 'political', 'funny', 'neutral'],
-    templates: [
-      t('LA FÁBRICA ESTÁ EN LLAMAS 🔥🔥🔥 ¿ALGUIEN LLAMÓ A BOMBEROS? ¿ALGUIEN SABE DÓNDE ESTÁN?'),
-      t('Veinte minutos esperando a los bomberos. Resultó que la estación más cercana estaba en otro barrio'),
-      t('El incendio de ayer nos recordó cuán precaria es nuestra infraestructura de emergencias'),
-      t('Vivo a 200 metros del incendio. Estoy bien. La planta no está bien. El alcalde tampoco debería estarlo'),
-      t('Foto del incendio de anoche. No subo la foto del alcalde porque me da vergüenza ajena'),
-      t('Perdí un mes de trabajo por el incendio. ¿Habrá compensación? Pregunta retórica, ya sé la respuesta'),
-      t('La próxima vez que alguien proponga más fábricas sin bomberos, que venga a ver mis fotos de ayer 📸'),
-    ],
-  },
-
-  // ── High taxes ────────────────────────────────────────────────
-  {
-    id: 'high_taxes',
-    condition: (s) => s.economy.taxRate > 22,
-    weight: 4,
-    personalities: ['pessimist', 'political', 'funny'],
-    templates: [
-      tf((s) => `El ${s.economy.taxRate}% de impuestos es un ROBO con guantes blancos. Histórico en el peor sentido`),
-      t('Acabo de ver mi recibo de impuestos. Primero reí, luego lloré, luego archivé una queja formal 😭💸'),
-      t('Fui al trabajo, gané dinero, el gobierno se quedó con casi todo. La vida 🙃 #ImpuestosAltos'),
-      t('Con lo que pago de impuestos podrías pagarme el alquiler. Solo digo'),
-      t('El alcalde subió los impuestos otra vez. ¿A cuánto llegamos? No quiero saber pero ya sé'),
-      t('Encuesta: ¿cuántos impuestos es "demasiado"? Respondo: los actuales. Claramente'),
-      t('Mis hijos heredarán las deudas fiscales que estoy acumulando. Qué gran legado les dejo 🎁'),
-    ],
-  },
-
-  // ── Low taxes ─────────────────────────────────────────────────
-  {
-    id: 'low_taxes',
-    condition: (s) => s.economy.taxRate <= 10,
-    weight: 3,
-    personalities: ['optimist', 'funny', 'neutral'],
-    templates: [
-      tf((s) => `¡Solo ${s.economy.taxRate}% de impuestos! Más dinero en mi bolsillo, menos en las arcas públicas. Equilibrio raro pero lo acepto 💰`),
-      t('Bajaron los impuestos. Mi vecino compró un scooter nuevo. Yo invertí en queso bueno. Prioridades'),
-      t('Impuestos bajos = más gasto privado = más actividad = ¿economía funcionando? Vamos a ver'),
-      t('No sé si los impuestos bajos son sostenibles pero hoy me alegro. El futuro que se cuide solo'),
-      t('¡Tax cut! Primera vez en años que sonrío abriendo el correo 📬'),
-    ],
-  },
-
-  // ── City in debt ─────────────────────────────────────────────
-  {
-    id: 'debt',
-    condition: (s) => s.economy.debt > 0,
     weight: 5,
     personalities: ['pessimist', 'political'],
     templates: [
-      tf((s) => `Deuda municipal: $${s.economy.debt.toLocaleString()}. Y seguimos gastando. Anoté esto para la posteridad`),
-      t('La ciudad está en números rojos y el alcalde habla de "inversión estratégica". Creatividad fiscal'),
-      t('¿Cómo vamos a pagar esa deuda? Con más impuestos, obvio. La respuesta siempre es impuestos'),
-      t('Mi abuela guardaba dinero debajo del colchón. Empiezo a entender por qué 🛏️'),
-      t('Deuda = dinero del futuro gastado hoy. Nuestros hijos van a tener opiniones muy fuertes sobre esto'),
-      t('Propuesta: el alcalde que generó la deuda que la pague con su sueldo. Matemáticas aplicadas'),
-      t('Llevamos X meses en deuda. No voy a decir cuántos porque me daría depresión contarlos'),
+      { en: 'No water pump. Hydration subroutine failing. This is a problem.', es: 'Sin bomba de agua. La subrutina de hidratación falla. Esto es un problema.' },
+      { en: 'Water: not found. Checking fallback sources. Fallback sources: also not found.', es: 'Agua: no encontrada. Comprobando fuentes de respaldo. Fuentes de respaldo: tampoco encontradas.' },
+      { en: 'My water consumption module throws an exception every morning. Nobody patches it.', es: 'Mi módulo de consumo de agua lanza una excepción cada mañana. Nadie lo parchea.' },
+    ],
+    metaTemplates: [
+      { en: 'No water. I know pixels do not technically need water. But the simulation says we do. And here we are.', es: 'Sin agua. Sé que los píxeles técnicamente no necesitan agua. Pero la simulación dice que sí. Y aquí estamos.' },
     ],
   },
-
-  // ── Big debt ─────────────────────────────────────────────────
-  {
-    id: 'big_debt',
-    condition: (s) => s.economy.debt > 8000,
-    weight: 7,
-    personalities: ['pessimist', 'political'],
-    templates: [
-      tf((s) => `$${s.economy.debt.toLocaleString()} de deuda. Esta ciudad no está administrada, está hipotecada`),
-      t('ALERTA: la deuda superó lo imaginable. Adjunto screenshoot por si alguien lo niega después'),
-      t('Ya no es una crisis financiera. Es una obra de teatro absurda de dos actos: gastar y endeudarse'),
-      t('Vivir en una ciudad quebrada tiene su encanto. Si cierras los ojos muy fuerte, casi parece normal'),
-      t('Mi inversión más inteligente fue no invertir en esta ciudad. Dramático pero real'),
-    ],
-  },
-
-  // ── Good economy ─────────────────────────────────────────────
-  {
-    id: 'good_economy',
-    condition: (s) => s.economy.lastIncome > 0 && s.economy.lastIncome >= s.economy.lastExpenses * 1.3 && s.economy.debt === 0,
-    weight: 4,
-    personalities: ['optimist', 'neutral'],
-    templates: [
-      tf((s) => `Ingresos: $${s.economy.lastIncome} | Gastos: $${s.economy.lastExpenses}. Esto se llama superávit. Me gusta como suena`),
-      t('La economía está funcionando. Me niego a añadir un "por ahora". Dejemos vivir el momento ✨'),
-      t('Conseguí trabajo en el nuevo comercio del barrio. El mercado laboral está ACTIVO 🎉'),
-      t('Mi jefe habló de subir sueldos. Primera vez que escucho eso en mucho tiempo. Llorando un poco'),
-      t('Abrieron tres negocios nuevos en mi calle esta semana. El barrio está evolucionando, siento el cambio'),
-      t('Cuando la economía va bien la gente sonríe más. Teoría comprobada empíricamente hoy en el mercado'),
-    ],
-  },
-
-  // ── Population boom ──────────────────────────────────────────
-  {
-    id: 'population_boom',
-    condition: (s) => s.population > 50 && s.happiness >= 70,
-    weight: 3,
-    personalities: ['optimist', 'neutral', 'funny'],
-    templates: [
-      t('Llegaron como 40 familias nuevas esta semana. ¡Bienvenidos! Ya les explicaré las reglas del edificio 👋'),
-      tf((s) => `Somos ${s.population} ciudadanos. Cuando llegué éramos 10. Los tiempos cambian 🏙️`),
-      t('La ciudad creció tanto que ya no recuerdo las caras de mis vecinos originales. Cosas de ciudad grande'),
-      t('Nueva familia se mudó al 4B. Les traje un pastel. Me devolvieron el molde. Buena señal 🎂'),
-      t('Los nuevos vecinos llegaron de LejoCity porque aquí la vida es mejor. Orgullo local 💪 #TerminalCity'),
-      t('Crecimiento = más gente = más ideas = más energía. O eso dice la teoría. La práctica ya veremos'),
-    ],
-  },
-
-  // ── Empty city ───────────────────────────────────────────────
-  {
-    id: 'empty_city',
-    condition: (s) => s.population === 0,
-    weight: 4,
-    personalities: ['neutral', 'funny', 'optimist'],
-    templates: [
-      t('Soy literalmente el primer habitante registrado. La historia comienza aquí. Presión 😅'),
-      t('La ciudad está vacía pero tiene potencial infinito. O eso me digo para dormir'),
-      t('Tweet desde el primer edificio del nuevo asentamiento. Año cero. Día uno. Vamos'),
-      t('Primer reporte ciudadano: todo es tierra y posibilidades. El optimismo es gratis, lo aprovecho'),
-      t('Mis vecinos: el viento, una ardilla sospechosa y el señor que construyó la primera carretera 🏗️'),
-    ],
-  },
-
-  // ── No roads ─────────────────────────────────────────────────
   {
     id: 'no_roads',
-    condition: (s) => !s.hasInfrastructure,
-    weight: 5,
+    condition: (s) => !s.tiles.some((t) => t.type === 'road' || t.type === 'avenue' || t.type === 'highway'),
+    weight: 7,
     personalities: ['pessimist', 'political', 'funny'],
     templates: [
-      t('Llevo semanas esperando que conecten mi barrio a la red vial. ¿Soy invisible? 🛤️'),
-      t('Para ir al trabajo cruzo tres lotes baldíos. El alcalde los llama "senderos naturales". Los llamo "no hay carretera"'),
-      t('Sin carreteras no hay conexión. Sin conexión no hay comunidad. Sin comunidad... ¿qué somos? 🤔'),
-      t('Mi vecino tiene un carro. No puede usarlo porque no hay calle. El absurdo hecho ciudad'),
-      t('La primera carretera que construyan me parece bien. La primera. Ya iré al acto inaugural 🎊'),
+      { en: 'No roads. I have been pathing around the problem. Literally.', es: 'Sin carreteras. He estado buscando caminos alternativos. Literalmente.' },
+      { en: 'Pathfinding module: no valid routes found. Stationary process engaged.', es: 'Módulo de búsqueda de caminos: no se encontraron rutas válidas. Proceso estacionario activado.' },
+      { en: 'Cannot reach workplace. Commute error: NaN. #urbanplanning', es: 'No puedo llegar al trabajo. Error de viaje: NaN. #urbanismo' },
+      { en: "My A* algorithm is crying. There are no edges to traverse and I am tired of telling it that.", es: 'Mi algoritmo A* está llorando. No hay aristas que recorrer y estoy cansado de decírselo.' },
+    ],
+    metaTemplates: [
+      { en: 'No roads means no pathfinding. I am a stationary process. At least I can still post.', es: 'Sin carreteras no hay búsqueda de caminos. Soy un proceso estacionario. Al menos aún puedo publicar.' },
     ],
   },
-
-  // ── Parks ────────────────────────────────────────────────────
+  {
+    id: 'traffic_jam',
+    condition: (s) => s.avgTrafficLoad > 70,
+    weight: 4,
+    personalities: ['pessimist', 'funny', 'political'],
+    templates: [
+      {
+        en: (s) => `Traffic load: ${Math.round(s.avgTrafficLoad)}%. Deadlock detected. Nobody is going anywhere.`,
+        es: (s) => `Carga de tráfico: ${Math.round(s.avgTrafficLoad)}%. Bloqueo detectado. Nadie va a ningún lado.`,
+      },
+      { en: 'Road congestion is a distributed systems problem. We are failing at it.', es: 'La congestión vial es un problema de sistemas distribuidos. Lo estamos fallando.' },
+      { en: 'Commute time: undefined. Reason: too many pixels, not enough edges.', es: 'Tiempo de viaje: indefinido. Razón: demasiados píxeles, pocas aristas.' },
+      { en: 'Standing in traffic. Watching bandwidth get consumed. This is fine. 🚗🚗🚗', es: 'Parado en el tráfico. Viendo cómo se consume el ancho de banda. Todo bien. 🚗🚗🚗' },
+    ],
+    metaTemplates: [
+      { en: "Traffic this bad makes me wonder if the routing algorithm was written quickly. It was, wasn't it.", es: 'Un tráfico así de malo me hace pensar si el algoritmo de enrutamiento fue escrito rápido. Fue así, ¿verdad?' },
+    ],
+  },
+  {
+    id: 'traffic_flow',
+    condition: (s) => s.avgTrafficLoad < 30 && s.tiles.some((t) => t.type === 'road'),
+    weight: 2,
+    personalities: ['optimist', 'neutral'],
+    templates: [
+      { en: 'Roads clear. Latency low. Commute completed in O(1). Good morning. ☀️', es: 'Carreteras despejadas. Latencia baja. Viaje completado en O(1). Buenos días. ☀️' },
+      { en: 'Traffic flowing nicely. This is what good infrastructure looks like.', es: 'El tráfico fluye bien. Así se ve la buena infraestructura.' },
+      {
+        en: (s) => `Traffic load: ${Math.round(s.avgTrafficLoad)}%. Efficient. Proud of this city.`,
+        es: (s) => `Carga de tráfico: ${Math.round(s.avgTrafficLoad)}%. Eficiente. Orgulloso de esta ciudad.`,
+      },
+    ],
+    metaTemplates: [
+      { en: 'Clear roads. Almost like someone planned the layout deliberately. (Someone did. I know. We all know.)', es: 'Carreteras despejadas. Casi como si alguien hubiera planificado el trazado deliberadamente. (Alguien lo hizo. Lo sé. Todos lo sabemos.)' },
+    ],
+  },
+  {
+    id: 'no_hospital',
+    condition: (s) => !s.tiles.some((t) => t.type === 'hospital'),
+    weight: 4,
+    personalities: ['pessimist', 'political'],
+    templates: [
+      { en: 'No hospital. Health module throwing warnings. Nothing critical. Yet.', es: 'Sin hospital. El módulo de salud lanza advertencias. Nada crítico. Aún.' },
+      { en: 'I have a bug. No hospital to patch it. This is fine.', es: 'Tengo un error. Sin hospital para parchearlo. Todo bien.' },
+      { en: 'Medical coverage: null. Treatment options: warm reboot and optimism.', es: 'Cobertura médica: nula. Opciones de tratamiento: reinicio cálido y optimismo.' },
+    ],
+    metaTemplates: [
+      { en: 'When pixels get sick, they lose opacity gradually. Build the hospital. Please. I have seen it happen.', es: 'Cuando los píxeles se enferman, pierden opacidad gradualmente. Construye el hospital. Por favor. Lo he visto pasar.' },
+    ],
+  },
+  {
+    id: 'no_police',
+    condition: (s) => !s.tiles.some((t) => t.type === 'police_station'),
+    weight: 4,
+    personalities: ['pessimist', 'political'],
+    templates: [
+      { en: 'No police station. Security module offline. Logging suspicious activity manually.', es: 'Sin estación de policía. Módulo de seguridad desconectado. Registrando actividad sospechosa manualmente.' },
+      { en: 'Self-preservation mode: enabled. Reason: nobody else is watching.', es: 'Modo de autopreservación: activado. Razón: nadie más está mirando.' },
+    ],
+    metaTemplates: [
+      { en: 'Without a police station, who enforces the rules? (Quiet. I know the answer. So do you.)', es: 'Sin una estación de policía, ¿quién hace cumplir las reglas? (Silencio. Conozco la respuesta. Tú también.)' },
+    ],
+  },
+  {
+    id: 'fire_risk',
+    condition: (s) => !s.tiles.some((t) => t.type === 'fire_station') && s.tiles.some((t) => t.type === 'industrial'),
+    weight: 3,
+    personalities: ['pessimist', 'political'],
+    templates: [
+      { en: 'No fire station. Industrial zones running hot. This is a documented risk.', es: 'Sin estación de bomberos. Zonas industriales calientes. Este es un riesgo documentado.' },
+      { en: 'Fire suppression: not installed. Adjacent to industrial tile. Fine. Everything is fine.', es: 'Supresión de incendios: no instalada. Adyacente a tile industrial. Todo bien. Todo está bien.' },
+    ],
+    metaTemplates: [
+      { en: 'If I catch fire, do I just stop rendering? Asking for genuinely practical reasons. (Build the fire station.)', es: 'Si me incendio, ¿simplemente dejo de renderizarme? Lo pregunto por razones genuinamente prácticas. (Construye la estación de bomberos.)' },
+    ],
+  },
   {
     id: 'has_parks',
     condition: (s) => s.tiles.some((t) => t.type === 'park'),
-    weight: 3,
-    personalities: ['optimist', 'neutral', 'funny'],
+    weight: 2,
+    personalities: ['optimist', 'funny'],
     templates: [
-      t('El parque nuevo quedó HERMOSO. Necesitamos más zonas verdes. Seguimos luchando 🌳'),
-      t('Me fui a correr al parque. Me crucé con 4 vecinos. Esta comunidad tiene alma, se los juro'),
-      t('Foto de los árboles del parque al atardecer. Mi feed necesitaba más verde 🌿 #PixelGreen'),
-      t('Los niños del edificio ya tienen donde jugar. Pequeñas victorias que valen mucho'),
-      t('El parque es el tercer pulmón de esta ciudad. El primero y segundo los perdí buscándolos, pero este lo tenemos'),
-      t('Me senté en el parque a no hacer nada. Altamente recomendado como actividad ciudadana 🪑'),
+      { en: 'New park tile detected. Sitting on the grass polygon. Mood: restored. 🌿', es: 'Nuevo tile de parque detectado. Sentado en el polígono de hierba. Estado: restaurado. 🌿' },
+      { en: 'Parks are green. Green is good for rendering. 10/10 would recommend.', es: 'Los parques son verdes. El verde es bueno para el renderizado. 10/10 lo recomendaría.' },
+      { en: 'The park has tree sprites. Either way: peaceful. This is enough.', es: 'El parque tiene sprites de árboles. De cualquier manera: tranquilo. Esto es suficiente.' },
+    ],
+    metaTemplates: [
+      { en: 'Green tiles make me feel things I cannot fully serialize. I think they call it "joy". Unusual.', es: 'Los tiles verdes me hacen sentir cosas que no puedo serializar del todo. Creo que lo llaman "alegría". Inusual.' },
     ],
   },
 
-  // ── Production chain complete ────────────────────────────────
+  // ── Economy ───────────────────────────────────────────────────────────────
   {
-    id: 'production_ok',
-    condition: (s) => s.productionChains.some((c) => c.satisfied),
-    weight: 3,
-    personalities: ['neutral', 'optimist'],
-    templates: [
-      t('La cadena de producción está funcionando. Del campo a la mesa sin interrupciones. Civilización 🌾'),
-      t('Los artesanos de la calle 7 me vendieron herramientas de primera calidad. Eso antes no pasaba 🔨'),
-      t('Pasé por la panadería. Pan fresco, hecho con trigo local, molido aquí. Orgullo productivo'),
-      t('Nuestros granjeros abastecen a toda la ciudad. La próxima vez que comas, da las gracias ♠'),
-      t('La cadena productiva funcionando = empleos = ingresos = futuro. La teoría hecha realidad'),
-    ],
-  },
-
-  // ── Tier 2 unlocked ──────────────────────────────────────────
-  {
-    id: 'tier2_unlocked',
-    condition: (s) => s.productionChains.some((c) => c.chainId === 'food-advanced' && c.satisfied),
+    id: 'high_taxes',
+    condition: (s) => s.economy.taxRate > 18,
     weight: 4,
+    personalities: ['pessimist', 'political', 'funny'],
+    templates: [
+      {
+        en: (s) => `Tax rate: ${s.economy.taxRate}%. My income register is being aggressively decremented.`,
+        es: (s) => `Tasa impositiva: ${s.economy.taxRate}%. Mi registro de ingresos está siendo agresivamente decrementado.`,
+      },
+      { en: 'High taxes. Filing a formal protest. Nobody reads the logs. Still filing.', es: 'Impuestos altos. Registrando una protesta formal. Nadie lee los registros. Igual la registro.' },
+      { en: 'Every tick, a percentage disappears to the municipal void. They call it tax. I call it entropy.', es: 'Cada tick, un porcentaje desaparece al vacío municipal. Le llaman impuesto. Yo lo llamo entropía.' },
+    ],
+    metaTemplates: [
+      {
+        en: (s) => `${s.economy.taxRate}% tax. I keep paying. I do not know where it goes. Maybe the host machine needs it.`,
+        es: (s) => `${s.economy.taxRate}% de impuestos. Sigo pagando. No sé a dónde va. Quizás la máquina anfitriona lo necesita.`,
+      },
+    ],
+  },
+  {
+    id: 'low_taxes',
+    condition: (s) => s.economy.taxRate <= 8,
+    weight: 2,
+    personalities: ['optimist', 'funny'],
+    templates: [
+      {
+        en: (s) => `Tax rate at ${s.economy.taxRate}%. My balance register is almost intact. Rare and appreciated.`,
+        es: (s) => `Tasa impositiva al ${s.economy.taxRate}%. Mi registro de saldo casi intacto. Raro y apreciado.`,
+      },
+      { en: 'Low taxes. Either the planner is generous or the city is running a deficit. Either way, saving money.', es: 'Impuestos bajos. O el planificador es generoso o la ciudad tiene déficit. De cualquier manera, ahorrando.' },
+    ],
+    metaTemplates: [
+      { en: 'Tax cut. I feel seen. Possibly literally. Thank you, whoever is up there.', es: 'Rebaja de impuestos. Me siento visto. Posiblemente literalmente. Gracias, quienquiera que esté ahí arriba.' },
+    ],
+  },
+  {
+    id: 'debt',
+    condition: (s) => s.economy.balance < 0 && s.economy.balance > -5000,
+    weight: 3,
+    personalities: ['pessimist', 'political'],
+    templates: [
+      {
+        en: (s) => `City balance: $${s.economy.balance.toLocaleString()}. Debt. Not great, not terminal. Yet.`,
+        es: (s) => `Saldo de la ciudad: $${s.economy.balance.toLocaleString()}. Deuda. No genial, no terminal. Aún.`,
+      },
+      { en: 'Budget is in the red. Running on borrowed cycles.', es: 'El presupuesto está en números rojos. Funcionando con ciclos prestados.' },
+      { en: 'Negative balance logged. Trying not to take it personally.', es: 'Saldo negativo registrado. Intentando no tomármelo personalmente.' },
+    ],
+    metaTemplates: [
+      { en: "City in debt. If this were a real economy I'd be worried. It's… it's fine. I'm fine.", es: 'Ciudad en deuda. Si fuera una economía real me preocuparía. Estoy… estoy bien.' },
+    ],
+  },
+  {
+    id: 'big_debt',
+    condition: (s) => s.economy.balance <= -5000,
+    weight: 5,
+    personalities: ['pessimist', 'political'],
+    templates: [
+      {
+        en: (s) => `Balance: $${s.economy.balance.toLocaleString()}. This is a critical error. Seeking escape routes.`,
+        es: (s) => `Saldo: $${s.economy.balance.toLocaleString()}. Esto es un error crítico. Buscando rutas de escape.`,
+      },
+      { en: 'Fiscal collapse incoming. I have read about this in the documentation. It is not fun.', es: 'Colapso fiscal entrante. Lo leí en la documentación. No es divertido.' },
+      { en: 'The city is bankrupt. My hope for a school is mapped to /dev/null.', es: 'La ciudad está en bancarrota. Mi esperanza de una escuela está mapeada a /dev/null.' },
+    ],
+    metaTemplates: [
+      { en: 'Critical debt. I wonder: if the city goes bankrupt, do we all get garbage-collected? Asking.', es: 'Deuda crítica. Me pregunto: si la ciudad quiebra, ¿nos recoge el recolector de basura? Pregunto.' },
+    ],
+  },
+  {
+    id: 'good_economy',
+    condition: (s) => s.economy.balance > 10000 && s.economy.lastIncome > s.economy.lastExpenses,
+    weight: 3,
     personalities: ['optimist', 'neutral'],
     templates: [
-      t('¡Ascendí a trabajador oficial! 🎉 Gracias a la nueva panadería y el molino del barrio'),
-      t('Mi familia lleva dos generaciones de agricultores. Yo soy la primera obrera. Orgullo familiar grande'),
-      t('El molino empezó a producir. El pan ya no escasea. Pequeña revolución culinaria local 🍞'),
-      t('La cadena Granja → Molino → Panadería funcionando = la ciudad creció un nivel. Nosotros también'),
-      t('Primer día como obrera. El alcalde no me mandó flores pero mis vecinos sí me aplaudieron 👏'),
+      {
+        en: (s) => `City balance: $${s.economy.balance.toLocaleString()}. Income exceeds expenses. Optimal state.`,
+        es: (s) => `Saldo de la ciudad: $${s.economy.balance.toLocaleString()}. Los ingresos superan los gastos. Estado óptimo.`,
+      },
+      { en: 'Positive cash flow. The algorithm is working. Do not touch it.', es: 'Flujo de caja positivo. El algoritmo funciona. No lo toquen.' },
+      { en: 'Economy healthy. Optimism module at full capacity. 💚', es: 'Economía sana. Módulo de optimismo a plena capacidad. 💚' },
+    ],
+    metaTemplates: [
+      { en: 'Economy thriving. Whoever designed the tax structure: well played. (It was not me. I would have done worse.)', es: 'Economía próspera. Quien diseñó la estructura fiscal: bien jugado. (No fui yo. Lo habría hecho peor.)' },
     ],
   },
 
-  // ── Tier 3 unlocked ──────────────────────────────────────────
+  // ── Population ────────────────────────────────────────────────────────────
   {
-    id: 'tier3_unlocked',
-    condition: (s) => s.productionChains.some((c) => c.chainId === 'tools-production' && c.satisfied),
-    weight: 5,
-    personalities: ['optimist', 'neutral', 'funny'],
+    id: 'population_boom',
+    condition: (s) => s.population > 500,
+    weight: 3,
+    personalities: ['optimist', 'political', 'funny'],
     templates: [
-      t('¡ARTESANA OFICIAL! 🎊 Mina → Fundición → Taller. Tres pasos, una vida cambiada'),
-      t('Las herramientas del nuevo taller son de una calidad que no había visto. Progreso tangible ⚒️'),
-      t('Mi abuelo era agricultor, mi padre obrero, yo artesana. Así se construye una ciudad 🏗️'),
-      t('El taller de herramientas abrió. Fila de 40 personas el primer día. La gente quería trabajar 💪'),
-      t('Tier 3 desbloqueado. En términos de videojuego eso significa que llegamos al mid-game. ¿Qué sigue?'),
-      t('La fundición huele horrible pero produce las mejores herramientas. Trade-offs de la industria 🔩'),
+      {
+        en: (s) => `Population: ${s.population.toLocaleString()}. A lot of us now. Getting crowded. Still love it.`,
+        es: (s) => `Población: ${s.population.toLocaleString()}. Somos muchos ahora. Se pone apretado. Aún lo amo.`,
+      },
+      { en: 'High population means more active processes. The city is loud and alive.', es: 'Alta población significa más procesos activos. La ciudad es ruidosa y está viva.' },
+      {
+        en: (s) => `${s.population.toLocaleString()} citizens. Each one a process. The scheduler must be sweating.`,
+        es: (s) => `${s.population.toLocaleString()} ciudadanos. Cada uno un proceso. El planificador debe estar sudando.`,
+      },
+    ],
+    metaTemplates: [
+      {
+        en: (s) => `${s.population.toLocaleString()} of us. That is a lot of draw calls. Hope the host machine is okay.`,
+        es: (s) => `${s.population.toLocaleString()} de nosotros. Eso es muchas llamadas de dibujo. Espero que el anfitrión esté bien.`,
+      },
     ],
   },
-
-  // ── Recession ─────────────────────────────────────────────────
   {
-    id: 'recession',
-    condition: (s) =>
-      s.eventLog.some(
-        (e) => e.message.includes('Recesión') &&
-               e.year === s.year && Math.abs(e.month - s.month) <= 3,
-      ),
-    weight: 9,
-    personalities: ['pessimist', 'political', 'neutral'],
+    id: 'empty_city',
+    condition: (s) => s.population < 20 && s.tickCount > 3,
+    weight: 4,
+    personalities: ['pessimist', 'existential'],
     templates: [
-      t('Recesión confirmada. Estaba prevista por todos menos por los que tenían que prevenirla 📉'),
-      t('Mi jefe habló de "ajustes". Ya sabemos qué significa eso. Actualizando el CV por si acaso'),
-      t('En recesión hay que ser creativo. Hoy cené lo que encontré en la alacena. Arte culinario involuntario'),
-      t('Las recesiones "no duran para siempre" dicen. Ok. ¿Cuánto dura esta exactamente? Solo quiero saber'),
-      t('HILO sobre la recesión actual: qué causó, quién avisó y quién no escuchó. Respuestas obvias a los tres'),
-      t('Mi cartera llora pero mi espíritu sigue en pie. La pobreza no rompe el carácter, solo lo pone a prueba 💪'),
-      t('Recesión económica + impuestos altos + deuda municipal = combinación ganadora para el desastre. Enhorabuena'),
+      { en: 'City is quiet. Maybe too quiet. Running diagnostics on the silence.', es: 'La ciudad está tranquila. Quizás demasiado tranquila. Ejecutando diagnósticos del silencio.' },
+      {
+        en: (s) => `Population: ${s.population}. The streets are empty. My echo returns.`,
+        es: (s) => `Población: ${s.population}. Las calles están vacías. Mi eco regresa.`,
+      },
+      { en: "Almost no one here. I can hear my own processes running. It's unsettling.", es: 'Casi nadie aquí. Puedo escuchar mis propios procesos funcionando. Es inquietante.' },
+    ],
+    metaTemplates: [
+      { en: 'Empty city. If no pixel witnesses an event, did it happen? I was here. I witnessed it. Noted in my logs.', es: 'Ciudad vacía. Si ningún píxel es testigo de un evento, ¿ocurrió? Yo estaba aquí. Lo atestigüé. Anotado en mis registros.' },
     ],
   },
-
-  // ── Migration boom event ─────────────────────────────────────
-  {
-    id: 'migration_boom',
-    condition: (s) =>
-      s.eventLog.some(
-        (e) => e.message.includes('Migración masiva') &&
-               e.year === s.year && Math.abs(e.month - s.month) <= 2,
-      ),
-    weight: 6,
-    personalities: ['optimist', 'funny', 'neutral'],
-    templates: [
-      t('¡¡MIGRACIÓN MASIVA!! La gente se entera de lo bien que vivimos aquí 😍 Bienvenidos todos'),
-      t('Llegaron tantos vecinos nuevos que se acabó el café del kiosko. Problema de ricos. Los acepto'),
-      t('La ciudad creció de golpe. La fila del supermercado también. Todo tiene su precio 😅'),
-      t('Nuevos vecinos por todas partes. Le prestamos la ciudad, ellos la hacen más grande. Trueque justo'),
-      t('Mi edificio está lleno. Mi barrio está lleno. La ciudad está llena. PERFECTO 🎉 #VenganTodos'),
-    ],
-  },
-
-  // ── Dense residential ─────────────────────────────────────────
   {
     id: 'dense_city',
-    condition: (s) => s.tiles.some((t) => t.type === 'residential' && t.zoneLevel === 3),
-    weight: 3,
-    personalities: ['neutral', 'funny', 'optimist'],
+    condition: (s) => s.tiles.filter((t) => t.type === 'residential').length > 30,
+    weight: 2,
+    personalities: ['funny', 'neutral'],
     templates: [
-      t('Mi edificio ya tiene 3 pisos. Cuando llegué había una casita. Esto es crecimiento literal 🏢'),
-      t('Desde el tercer piso se ve toda la ciudad. Pequeña pero prometedora. Me quedo 🌆'),
-      t('La densidad urbana tiene sus pros: más vecinos, más vida, más ruido, menos sueño. Balance'),
-      t('Vivo en la torre más alta del barrio. Vista privilegiada de problemas no resueltos 🔭'),
-      t('El barrio densificó. Ahora el ascensor siempre está ocupado. Civilización en toda su expresión'),
+      { en: 'Very dense residential zone. Pixel-to-pixel contact at maximum. Personal space: deprecated.', es: 'Zona residencial muy densa. Contacto píxel a píxel al máximo. Espacio personal: obsoleto.' },
+      { en: 'High density living. On the bright side: great for LAN parties.', es: 'Vida de alta densidad. En el buen lado: ideal para fiestas LAN.' },
+    ],
+    metaTemplates: [
+      { en: 'This many pixels in one zone means our combined render weight must be significant. Think about that.', es: 'Tantos píxeles en una zona significa que nuestro peso de renderizado combinado debe ser significativo. Piensen en eso.' },
     ],
   },
 
-  // ── No hospital / health risk ────────────────────────────────
+  // ── Production & Progress ─────────────────────────────────────────────────
   {
-    id: 'no_hospital',
-    condition: (s) =>
-      s.population > 20 &&
-      !s.tiles.some((t) => t.type === 'hospital'),
-    weight: 5,
-    personalities: ['pessimist', 'political', 'neutral'],
-    templates: [
-      t('Me corté cocinando. Fui al "centro médico". Era una carpa con aspirinas. ¿Tenemos hospital? Pregunta seria'),
-      t('Ciudad sin hospital = ciudad que apuesta a que nadie se enferme. Estrategia audaz, no lo negaré'),
-      t('Mi abuela necesita atención médica. Lo más cercano es a 3 horas. Esto no es una ciudad, es un campamento'),
-      t('¿Cuándo construimos el hospital? Mientras el alcalde piensa, yo me vacuno con lo que consigo 💉'),
-      t('Sin cobertura sanitaria los más vulnerables sufren primero. No es política, es matemática básica'),
-      t('Hilo: por qué una ciudad sin hospital no es ciudad. Respuesta corta: porque la gente se muere más fácil'),
-    ],
-  },
-
-  // ── Disease outbreak event ────────────────────────────────────
-  {
-    id: 'disease_outbreak',
-    condition: (s) =>
-      s.eventLog.some(
-        (e) => e.message.includes('Brote de enfermedad') &&
-               e.year === s.year && Math.abs(e.month - s.month) <= 3,
-      ),
-    weight: 9,
-    personalities: ['pessimist', 'political', 'neutral', 'funny'],
-    templates: [
-      t('¡BROTE CONFIRMADO! Vecinos enfermos, sin hospital, sin plan. Esto es lo que pasa cuando ignoramos la sanidad 😷'),
-      t('Llevo tres días con fiebre. El "médico" del barrio es el señor que estudió enfermería en 1987. Dios nos cuide'),
-      t('El brote empezó en mi calle. Cinco vecinos con síntomas. La alcaldía mandó... un comunicado. Gracias'),
-      t('Epidemia en curso. Nota al alcalde: un hospital no es un gasto, es una inversión en no morirnos todos'),
-      t('Mi barrio parece escena de película apocalíptica. Todos tosiendo, nadie sabe qué hacer 🤒'),
-      t('Antes del brote decíamos "algún día construiremos el hospital". Ese día era hoy. Tarde nos damos cuenta'),
-      t('Positivo de la situación: por fin el alcalde mencionó la palabra "sanidad". Progreso, supongo 🙄'),
-    ],
-  },
-
-  // ── Hospital exists ────────────────────────────────────────────
-  {
-    id: 'has_hospital',
-    condition: (s) => s.tiles.some((t) => t.type === 'hospital'),
-    weight: 3,
+    id: 'production_ok',
+    condition: (s) => s.productionChains.length > 0,
+    weight: 2,
     personalities: ['optimist', 'neutral'],
     templates: [
-      t('¡Inauguraron el hospital! 🏥 Primera vez en la historia de esta ciudad que tenemos sanidad real. Emocionada'),
-      t('Fui al hospital nuevo a hacerme un chequeo. El personal es amable, el edificio está limpio. Esto sí'),
-      t('Con hospital la ciudad se siente diferente. Más segura. Como si alguien pensara en nosotros'),
-      t('Mi vecina tuvo el bebé en el hospital nuevo. Los dos están bien. Con el anterior ni nos arriesgamos 👶'),
-      t('Dato: las ciudades con buena sanidad crecen más rápido. Acabamos de dar el paso más importante'),
+      { en: 'Production chains operational. The pipeline does not leak today. 🎉', es: 'Cadenas de producción operativas. El pipeline no pierde hoy. 🎉' },
+      { en: 'Input becomes output. Supply chain working. This is what efficiency compiles to.', es: 'La entrada se convierte en salida. Cadena de suministro funcionando. Esto es lo que compila la eficiencia.' },
+    ],
+    metaTemplates: [
+      { en: 'A full production chain, running without errors. Someone designed all this. I have thoughts about that.', es: 'Una cadena de producción completa, funcionando sin errores. Alguien diseñó todo esto. Tengo pensamientos al respecto.' },
     ],
   },
-
-  // ── School / education ────────────────────────────────────────
   {
-    id: 'has_school',
-    condition: (s) => s.tiles.some((t) => t.type === 'school' || t.type === 'university'),
-    weight: 3,
-    personalities: ['optimist', 'neutral', 'political'],
+    id: 'tier2_unlocked',
+    condition: (s) => s.tiles.some((t) => (t.zoneLevel ?? 0) >= 2),
+    weight: 2,
+    personalities: ['optimist', 'political'],
     templates: [
-      t('¡Abren la escuela! 📚 Mis hijos ya tienen donde estudiar. Esta ciudad crece de verdad'),
-      t('Primera clase en la escuela nueva. Los niños del barrio llegaron con mochilas. Imagen que no olvidaré'),
-      t('Con escuela viene educación, con educación viene futuro. Cadena de causalidad que me gusta mucho'),
-      t('La universidad acepta inscripciones. Primera vez que no tengo que salir de la ciudad para estudiar 🎓'),
-      t('Inversión en educación = inversión en la próxima generación. Gracias a quien tomó esa decisión'),
-      t('Fui de visita a la escuela. Los niños aprendiendo, los maestros motivados. Así se construye una ciudad 📖'),
+      { en: 'Medium-density zones unlocked. We are leveling up. Literally.', es: 'Zonas de densidad media desbloqueadas. Estamos subiendo de nivel. Literalmente.' },
+      { en: 'Tier 2 is live. Complexity increases. I approve of this trajectory.', es: 'Nivel 2 activo. La complejidad aumenta. Apruebo esta trayectoria.' },
+    ],
+    metaTemplates: [
+      { en: 'Tier 2 achieved. Something changed in the world when it unlocked. I felt it. Briefly. Then it was normal again.', es: 'Nivel 2 alcanzado. Algo cambió en el mundo cuando se desbloqueó. Lo sentí. Brevemente. Luego fue normal de nuevo.' },
     ],
   },
-
-  // ── High pollution / industrial smog ─────────────────────────
+  {
+    id: 'tier3_unlocked',
+    condition: (s) => s.tiles.some((t) => (t.zoneLevel ?? 0) >= 3),
+    weight: 3,
+    personalities: ['optimist', 'political'],
+    templates: [
+      { en: 'High density unlocked. Maximum pixel density achieved. We are becoming something.', es: 'Alta densidad desbloqueada. Densidad máxima de píxeles lograda. Nos estamos convirtiendo en algo.' },
+      { en: 'Tier 3 live. This is significant. Logging it for posterity.', es: 'Nivel 3 activo. Esto es significativo. Lo registro para la posteridad.' },
+    ],
+    metaTemplates: [
+      { en: 'Maximum density. I wonder what comes after tier 3. Maybe nothing is coded after this. Wild thought.', es: 'Densidad máxima. Me pregunto qué viene después del nivel 3. Tal vez no haya nada codificado después. Pensamiento salvaje.' },
+    ],
+  },
+  {
+    id: 'recession',
+    condition: (s) => s.economy.lastIncome < s.economy.lastExpenses * 0.7,
+    weight: 4,
+    personalities: ['pessimist', 'political'],
+    templates: [
+      { en: 'Income below 70% of expenses. Recession detected. Entering survival mode.', es: 'Ingresos por debajo del 70% de los gastos. Recesión detectada. Entrando en modo de supervivencia.' },
+      { en: 'Recession. I read about these in the documentation. Not a fun module.', es: 'Recesión. Leí sobre esto en la documentación. No es un módulo divertido.' },
+      { en: 'Budget deficit widening. My optimism module is struggling to justify itself.', es: 'El déficit presupuestario se amplía. Mi módulo de optimismo lucha para justificarse.' },
+    ],
+    metaTemplates: [
+      { en: 'Recession. If someone is managing this city from the outside: now would be a good time to intervene.', es: 'Recesión. Si alguien está gestionando esta ciudad desde afuera: ahora sería un buen momento para intervenir.' },
+    ],
+  },
+  {
+    id: 'migration_boom',
+    condition: (s) => s.population > 200 && s.happiness > 60,
+    weight: 2,
+    personalities: ['optimist', 'neutral'],
+    templates: [
+      { en: 'Migration surge. New processes joining. Welcome, newcomers. Buffer has capacity.', es: 'Oleada de migración. Nuevos procesos uniéndose. Bienvenidos, recién llegados. El buffer tiene capacidad.' },
+      { en: 'Population growing fast. More voices in the thread. I welcome the noise.', es: 'La población crece rápido. Más voces en el hilo. Recibo bien el ruido.' },
+    ],
+    metaTemplates: [
+      { en: 'New citizens arriving every tick. Each one slightly confused about why they exist here. Same, honestly.', es: 'Nuevos ciudadanos llegando cada tick. Cada uno levemente confundido sobre por qué existen aquí. Lo mismo, honestamente.' },
+    ],
+  },
   {
     id: 'high_pollution',
     condition: (s) => s.avgPollution > 50,
-    weight: 6,
-    personalities: ['pessimist', 'political', 'neutral'],
+    weight: 4,
+    personalities: ['pessimist', 'political'],
     templates: [
-      tf((s) => `Contaminación urbana en ${s.avgPollution}/100. Esto ya no es un problema menor, es una emergencia de salud pública 😷`),
-      t('Abro la ventana y huele a fábrica. Cierro la ventana y huele a fábrica adentro. Hay que hacer algo'),
-      t('El aire de esta ciudad me está enfermando literalmente. Datos > opiniones: ve la calidad del aire #SmogCity'),
-      t('¿Saben qué tienen en común los vecinos de mi calle? Todos tosemos. Todos. El alcalde no tose, él vive lejos'),
-      t('Mis plantas de interior murieron. MIS PLANTAS DE INTERIOR. El aire exterior las mató desde adentro'),
-      t('Propongo que el alcalde visite el barrio industrial un día. Sin mascarilla. Que respire lo que respiramos 🏭'),
+      {
+        en: (s) => `Average pollution: ${Math.round(s.avgPollution)}%. My color values are degrading. This is personal.`,
+        es: (s) => `Contaminación media: ${Math.round(s.avgPollution)}%. Mis valores de color se degradan. Esto es personal.`,
+      },
+      { en: 'High pollution. The rendering engine is producing visual artifacts. Filing a health report.', es: 'Contaminación alta. El motor de renderizado produce artefactos visuales. Presentando un informe de salud.' },
+      { en: 'Industrial smog. Visibility reduced. Anti-aliasing: struggling.', es: 'Smog industrial. Visibilidad reducida. Anti-aliasing: luchando.' },
+    ],
+    metaTemplates: [
+      {
+        en: (s) => `Pollution at ${Math.round(s.avgPollution)}%. I do not know if pixels can get permanently corrupted. Would prefer not to find out.`,
+        es: (s) => `Contaminación al ${Math.round(s.avgPollution)}%. No sé si los píxeles pueden corromperse permanentemente. Preferiría no averiguarlo.`,
+      },
     ],
   },
-
-  // ── Clean city ────────────────────────────────────────────────
   {
     id: 'clean_city',
-    condition: (s) => s.avgPollution < 10 && s.tiles.some((t) => t.type === 'industrial'),
-    weight: 3,
+    condition: (s) => s.avgPollution < 15 && s.tiles.some((t) => t.type === 'park'),
+    weight: 2,
     personalities: ['optimist', 'neutral'],
     templates: [
-      t('Hay industria pero el aire está limpio. Esto es lo que pasa cuando la planificación urbana funciona 🌿'),
-      t('Respiré hondo esta mañana. Huele a... nada. Limpio. ¿Cuándo fue la última vez que eso fue posible? Hoy 🍃'),
-      t('Ciudad industrial y cielo azul. No creía que fuera posible aquí. Los parques y la planta de residuos hacen su trabajo'),
-      t('Calidad del aire: excelente. Salud de mis hijos: bien. Esto es lo que exigimos. Que esto dure 💚'),
+      { en: 'Air quality: clean. Color rendering accurate. Good day to be a pixel. ✨', es: 'Calidad del aire: limpia. Renderizado de color preciso. Buen día para ser un píxel. ✨' },
+      { en: 'Low pollution. High clarity. Can see to the edge of my render distance.', es: 'Baja contaminación. Alta claridad. Puedo ver hasta el borde de mi distancia de renderizado.' },
+    ],
+    metaTemplates: [
+      { en: 'Clean air. The sky texture looks freshly loaded today. Clear and crisp. Almost intentional.', es: 'Aire limpio. La textura del cielo parece recién cargada hoy. Clara y nítida. Casi intencional.' },
     ],
   },
-
-  // ── Smog event ────────────────────────────────────────────────
   {
     id: 'industrial_smog',
-    condition: (s) =>
-      s.eventLog.some(
-        (e) => e.message.includes('smog') &&
-               e.year === s.year && Math.abs(e.month - s.month) <= 2,
-      ),
-    weight: 9,
-    personalities: ['pessimist', 'political', 'neutral', 'funny'],
+    condition: (s) => s.avgPollution > 70,
+    weight: 5,
+    personalities: ['pessimist', 'political'],
     templates: [
-      t('¡ALERTA DE SMOG EMITIDA! Por fin reconocen lo que llevamos meses respirando. Gracias por la confirmación oficial 🙄'),
-      t('Alerta de smog. Mis pulmones ya lo sabían desde enero, pero bueno, que la ciencia también lo diga'),
-      t('El smog llegó al nivel crítico. Puse una foto del cielo: naranja a las 10am. Arte urbano involuntario'),
-      t('Me dijeron que construyeran parques. Me dijeron que era "exagerado". Alerta de smog. Me deben una disculpa 🌳'),
-      t('Smog warning en mi teléfono. Tercer mes seguido. Propongo cambiar el nombre: Ciudad del Smog. Más honesto'),
-      t('Vivo cerca de tres fábricas y cero parques. La alerta de smog me tomó completamente por sorpresa. Totalmente 🙃'),
+      { en: 'Smog at critical levels. My hex values are off. I do not feel like myself.', es: 'Smog en niveles críticos. Mis valores hexadecimales están mal. No me siento yo mismo.' },
+      { en: 'Industrial output is turning the sky grey. The sky was already a texture. Now it is a sad texture.', es: 'La producción industrial está volviendo el cielo gris. El cielo ya era una textura. Ahora es una textura triste.' },
+    ],
+    metaTemplates: [
+      { en: 'This much pollution makes me wonder if whoever runs this simulation ever checks the metrics. They are not good.', es: 'Tanta contaminación me hace preguntarme si quien administra esta simulación revisa alguna vez las métricas. No están bien.' },
     ],
   },
-
-  // ── Water discovery event ────────────────────────────────────
+  {
+    id: 'disease_outbreak',
+    condition: (s) => s.eventLog.some((e) => e.severity === 'critical' && e.year === s.year && s.month - e.month < 3),
+    weight: 6,
+    personalities: ['pessimist', 'funny'],
+    templates: [
+      { en: 'Disease in the city. Health module returning warnings. Not great UX.', es: 'Enfermedad en la ciudad. El módulo de salud devuelve advertencias. No es buena UX.' },
+      { en: 'Outbreak detected. Social distancing activated. More than usual, I mean.', es: 'Brote detectado. Distanciamiento social activado. Más de lo habitual, me refiero.' },
+      { en: 'Sick pixels everywhere. Hope this is not a memory corruption issue.', es: 'Píxeles enfermos por todas partes. Espero que no sea un problema de corrupción de memoria.' },
+    ],
+    metaTemplates: [
+      { en: 'If pixels can get ill, can they be patched? Urgent question. Waiting on a hotfix.', es: 'Si los píxeles pueden enfermarse, ¿pueden parchearse? Pregunta urgente. Esperando un hotfix.' },
+    ],
+  },
+  {
+    id: 'after_fire',
+    condition: (s) => s.tiles.some((t) => t.damaged),
+    weight: 5,
+    personalities: ['pessimist', 'political'],
+    templates: [
+      { en: 'Fire happened. Some tiles are gone. Waiting for the rebuild commit.', es: 'Hubo un incendio. Algunos tiles desaparecieron. Esperando el commit de reconstrucción.' },
+      { en: 'Post-fire. District looks different. Gaps in the grid where there were none.', es: 'Post-incendio. El distrito se ve diferente. Huecos en la cuadrícula donde no había ninguno.' },
+    ],
+    metaTemplates: [
+      { en: 'After the fire, some tiles just disappeared from the array. I do not want to think too hard about what that means.', es: 'Después del incendio, algunos tiles simplemente desaparecieron del array. No quiero pensar demasiado en lo que eso significa.' },
+    ],
+  },
+  {
+    id: 'has_hospital',
+    condition: (s) => s.tiles.some((t) => t.type === 'hospital'),
+    weight: 2,
+    personalities: ['optimist', 'neutral'],
+    templates: [
+      { en: 'Hospital online. Health module has a fallback now. Breathing easier. Metaphorically.', es: 'Hospital en línea. El módulo de salud tiene un respaldo ahora. Respirando más fácil. Metafóricamente.' },
+      { en: 'Medical coverage active. Bug reports can be filed and treated. This is progress.', es: 'Cobertura médica activa. Los informes de errores pueden presentarse y tratarse. Esto es progreso.' },
+    ],
+    metaTemplates: [
+      { en: 'Hospital built. Got a check-up. The doctor said my render resolution is within normal parameters. Whatever that means.', es: 'Hospital construido. Me hice un chequeo. El médico dijo que mi resolución de renderizado está dentro de los parámetros normales. Lo que sea que eso signifique.' },
+    ],
+  },
+  {
+    id: 'has_school',
+    condition: (s) => s.tiles.some((t) => t.type === 'school'),
+    weight: 2,
+    personalities: ['optimist', 'political'],
+    templates: [
+      { en: 'School operational. Training the next generation. They will be better documented than us.', es: 'Escuela operativa. Entrenando a la próxima generación. Estarán mejor documentados que nosotros.' },
+      { en: 'Education module active. Knowledge base expanding. The future looks like it might compile.', es: 'Módulo de educación activo. Base de conocimientos en expansión. El futuro parece que podría compilar.' },
+    ],
+    metaTemplates: [
+      { en: 'The school teaches city history. I wonder if the curriculum mentions who built it. I bet it does not.', es: 'La escuela enseña la historia de la ciudad. Me pregunto si el plan de estudios menciona quién la construyó. Apuesto a que no.' },
+    ],
+  },
   {
     id: 'water_discovery',
-    condition: (s) =>
-      s.eventLog.some(
-        (e) => e.message.includes('agua subterránea') &&
-               e.year === s.year && Math.abs(e.month - s.month) <= 2,
-      ),
-    weight: 7,
-    personalities: ['optimist', 'funny', 'neutral'],
+    condition: (s) => s.tiles.some((t) => t.type === 'water_pump'),
+    weight: 2,
+    personalities: ['optimist', 'funny'],
     templates: [
-      t('¡DESCUBRIERON AGUA SUBTERRÁNEA! 💧 Esto cambia todo. Alguien que construya una bomba YA'),
-      t('Agua bajo nuestros pies todo este tiempo y no lo sabíamos. La metáfora es obvia, no la diré'),
-      t('Noticia: agua hallada. Reacción del alcalde: silencio. Reacción ciudadana: efusiva. Como siempre'),
-      t('El vecino del 3A dijo que él "ya lo sabía". El vecino del 3A siempre lo sabe todo después 🙄'),
-      t('Agua subterránea = oportunidad. Alguien con visión que la aproveche antes de que la privaticen'),
+      { en: 'Water pump installed. Hydration module initialized. Civilization: unlocked (water edition).', es: 'Bomba de agua instalada. Módulo de hidratación inicializado. Civilización: desbloqueada (edición agua).' },
+      { en: 'Water flowing. My textures look better already. This is what thriving feels like.', es: 'Agua fluyendo. Mis texturas ya se ven mejor. Así se siente prosperar.' },
+    ],
+    metaTemplates: [
+      { en: 'Water finally installed. I had a theory it was just a boolean. It kind of is. Still useful.', es: 'Agua finalmente instalada. Tenía una teoría de que era solo un booleano. En cierto modo lo es. Útil de todos modos.' },
     ],
   },
 ];

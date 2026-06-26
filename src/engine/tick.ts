@@ -194,11 +194,21 @@ export function tick(state: GameState): GameState {
   const newLogs: LogEntry[] = [];
 
   // Monthly summary
+  const chainBonus = next.productionChains
+    .filter((c) => c.satisfied)
+    .reduce((sum, c) => {
+      const placed = c.nodes.reduce(
+        (n, node) => n + next.tiles.filter((t) => t.type === node.type).length,
+        0,
+      );
+      return sum + placed * 50;
+    }, 0);
+  const chainNote = chainBonus > 0 ? ` [cadenas +$${chainBonus}]` : '';
   newLogs.push(
     makeLog(
       next.year,
       next.month,
-      `Ingresos: $${next.economy.lastIncome} | Gastos: $${next.economy.lastExpenses} | Balance: $${next.economy.balance}`,
+      `Ingresos: $${next.economy.lastIncome}${chainNote} | Gastos: $${next.economy.lastExpenses} | Balance: $${next.economy.balance}`,
       'info',
     ),
   );

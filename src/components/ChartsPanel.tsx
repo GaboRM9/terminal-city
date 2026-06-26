@@ -1,5 +1,6 @@
 import { useGameStore } from '../store/gameStore';
 import type { HistorySnapshot } from '../engine/types';
+import { UI } from '../i18n';
 
 // ─────────────────────────────────────────────
 //  24-month sparkline charts panel
@@ -74,7 +75,8 @@ function ChartRow({ label, values, color, fmt, higherIsBetter = true }: ChartRow
 }
 
 export function ChartsPanel(): JSX.Element {
-  const { state } = useGameStore();
+  const { state, lang } = useGameStore();
+  const t = UI[lang];
   const h: HistorySnapshot[] = state.history;
 
   const get = (key: keyof HistorySnapshot) => h.map((s) => s[key] as number);
@@ -90,7 +92,6 @@ export function ChartsPanel(): JSX.Element {
         minHeight: 0,
       }}
     >
-      {/* Header */}
       <div
         style={{
           fontSize: 10,
@@ -101,75 +102,26 @@ export function ChartsPanel(): JSX.Element {
           paddingBottom: 4,
         }}
       >
-        GRÁFICOS — últimos {h.length} meses
+        {t.chartsTitle(h.length)}
       </div>
 
       {h.length < 2 ? (
-        <div style={{ color: '#333', fontSize: 11 }}>
-          Avanza al menos 2 meses para ver gráficos.
-        </div>
+        <div style={{ color: '#333', fontSize: 11 }}>{t.chartsNeedMore}</div>
       ) : (
         <>
-          <div style={{ color: '#2a4a2a', fontSize: 10, marginBottom: 6 }}>
-            ECONOMÍA
-          </div>
-          <ChartRow
-            label="Balance"
-            values={get('balance')}
-            color="#00ff41"
-            fmt={(v) => `$${v.toLocaleString()}`}
-          />
-          <ChartRow
-            label="Ingresos"
-            values={get('income')}
-            color="#44cc00"
-            fmt={(v) => `$${v}`}
-          />
-          <ChartRow
-            label="Gastos"
-            values={get('expenses')}
-            color="#ffb000"
-            fmt={(v) => `$${v}`}
-            higherIsBetter={false}
-          />
+          <div style={{ color: '#2a4a2a', fontSize: 10, marginBottom: 6 }}>{t.chartEconomy}</div>
+          <ChartRow label={t.chartBalance}    values={get('balance')}    color="#00ff41" fmt={(v) => `$${v.toLocaleString()}`} />
+          <ChartRow label={t.chartIncome}     values={get('income')}     color="#44cc00" fmt={(v) => `$${v}`} />
+          <ChartRow label={t.chartExpenses}   values={get('expenses')}   color="#ffb000" fmt={(v) => `$${v}`} higherIsBetter={false} />
 
-          <div style={{ color: '#2a4a2a', fontSize: 10, margin: '10px 0 6px' }}>
-            CIUDAD
-          </div>
-          <ChartRow
-            label="Población"
-            values={get('population')}
-            color="#00aaff"
-            fmt={(v) => String(v)}
-          />
-          <ChartRow
-            label="Felicidad"
-            values={get('happiness')}
-            color="#ffee00"
-            fmt={(v) => `${v}%`}
-          />
+          <div style={{ color: '#2a4a2a', fontSize: 10, margin: '10px 0 6px' }}>{t.chartCity}</div>
+          <ChartRow label={t.chartPopulation} values={get('population')} color="#00aaff" fmt={(v) => String(v)} />
+          <ChartRow label={t.chartHappiness}  values={get('happiness')}  color="#ffee00" fmt={(v) => `${v}%`} />
 
-          <div style={{ color: '#2a4a2a', fontSize: 10, margin: '10px 0 6px' }}>
-            DEMANDA RCI
-          </div>
-          <ChartRow
-            label="Residencial R"
-            values={get('rDemand')}
-            color="#00ff41"
-            fmt={(v) => `${v}%`}
-          />
-          <ChartRow
-            label="Comercial C"
-            values={get('cDemand')}
-            color="#ffb000"
-            fmt={(v) => `${v}%`}
-          />
-          <ChartRow
-            label="Industrial I"
-            values={get('iDemand')}
-            color="#ff6600"
-            fmt={(v) => `${v}%`}
-          />
+          <div style={{ color: '#2a4a2a', fontSize: 10, margin: '10px 0 6px' }}>{t.chartRCI}</div>
+          <ChartRow label={t.chartResidential} values={get('rDemand')} color="#00ff41" fmt={(v) => `${v}%`} />
+          <ChartRow label={t.chartCommercial}  values={get('cDemand')} color="#ffb000" fmt={(v) => `${v}%`} />
+          <ChartRow label={t.chartIndustrial}  values={get('iDemand')} color="#ff6600" fmt={(v) => `${v}%`} />
         </>
       )}
     </div>

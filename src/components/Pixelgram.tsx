@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
 import type { PixelgramPost } from '../engine/types';
+import { UI } from '../i18n';
 
 // ─────────────────────────────────────────────
 //  Pixelgram — the social network of the Pixels
@@ -24,7 +25,7 @@ function PostContent({ text }: { text: string }): JSX.Element {
   );
 }
 
-function PostCard({ post }: { post: PixelgramPost }): JSX.Element {
+function PostCard({ post, lang }: { post: PixelgramPost; lang: 'en' | 'es' }): JSX.Element {
   return (
     <div
       style={{
@@ -85,7 +86,7 @@ function PostCard({ post }: { post: PixelgramPost }): JSX.Element {
             wordBreak: 'break-word',
           }}
         >
-          <PostContent text={post.content} />
+          <PostContent text={post.content[lang]} />
         </div>
 
         {/* Footer: engagement */}
@@ -107,7 +108,8 @@ function PostCard({ post }: { post: PixelgramPost }): JSX.Element {
 }
 
 export function Pixelgram(): JSX.Element {
-  const { state } = useGameStore();
+  const { state, lang } = useGameStore();
+  const t = UI[lang];
   const topRef = useRef<HTMLDivElement>(null);
   const prevCount = useRef(0);
 
@@ -144,17 +146,11 @@ export function Pixelgram(): JSX.Element {
       >
         <span style={{ color: '#00ff41', fontSize: 13, letterSpacing: 1 }}>◆</span>
         <span style={{ color: '#00ff41', fontSize: 11, fontWeight: 'bold', letterSpacing: 2 }}>
-          PIXELGRAM
+          {t.pixelgramTitle}
         </span>
-        <span style={{ color: '#1a3a1a', fontSize: 9 }}>red social de los pixels</span>
-        <span
-          style={{
-            marginLeft: 'auto',
-            color: '#1a4a1a',
-            fontSize: 9,
-          }}
-        >
-          {state.pixelgramPosts.length} posts · {state.population} pixels
+        <span style={{ color: '#1a3a1a', fontSize: 9 }}>{t.pixelgramSub}</span>
+        <span style={{ marginLeft: 'auto', color: '#1a4a1a', fontSize: 9 }}>
+          {state.pixelgramPosts.length} {t.pixelgramPosts} · {state.population} {t.pixelgramPixels}
         </span>
       </div>
 
@@ -172,11 +168,10 @@ export function Pixelgram(): JSX.Element {
             }}
           >
             <div style={{ fontSize: 20, marginBottom: 8 }}>◆</div>
-            <div>Pixelgram arranca cuando la simulación comienza.</div>
-            <div style={{ color: '#111' }}>Los pixels postearán pronto...</div>
+            <div>{t.pixelgramWait}</div>
           </div>
         ) : (
-          state.pixelgramPosts.map((post) => <PostCard key={post.id} post={post} />)
+          state.pixelgramPosts.map((post) => <PostCard key={post.id} post={post} lang={lang} />)
         )}
       </div>
     </div>

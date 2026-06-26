@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback, KeyboardEvent } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { executeCommand, autocomplete } from '../commands/executor';
 import type { LogEntry } from '../engine/types';
+import { UI } from '../i18n';
 
 // ─────────────────────────────────────────────
 //  Command console — output panel + CLI input
@@ -44,7 +45,8 @@ function OutputLine({ entry }: { entry: LogEntry }): JSX.Element {
 }
 
 export function CommandConsole(): JSX.Element {
-  const { state, addLog, saveGame, loadGame, getSavesMeta, undo, toggleLivestats, showLivestats, toggleCharts, toggleTraffic, setDistrictPaintMode } = useGameStore();
+  const { state, addLog, saveGame, loadGame, getSavesMeta, undo, consoleTab, setConsoleTab, toggleTraffic, setDistrictPaintMode, lang } = useGameStore();
+  const t = UI[lang];
   const [input, setInput] = useState('');
   const [history, setHistory] = useState<string[]>([]);
   const [historyIdx, setHistoryIdx] = useState(-1);
@@ -79,14 +81,15 @@ export function CommandConsole(): JSX.Element {
     const msg = result.message;
 
     if (msg === '__LIVESTATS__') {
-      toggleLivestats();
-      addLog(showLivestats ? 'Pixelgram activado.' : 'LiveStats activado.', 'info', 'system');
+      const next = consoleTab === 'livestats' ? 'console' : 'livestats';
+      setConsoleTab(next as 'console' | 'livestats');
+      addLog(next === 'livestats' ? t.pixelgramOff : t.pixelgramOn, 'info', 'system');
       return;
     }
 
     if (msg === '__CHARTS__') {
-      toggleCharts();
-      addLog('Panel de gráficos activado.', 'info', 'system');
+      setConsoleTab('charts');
+      addLog(t.chartsOn, 'info', 'system');
       return;
     }
 
@@ -99,10 +102,10 @@ export function CommandConsole(): JSX.Element {
       const meta = getSavesMeta();
       const lines = meta.map((m) =>
         m.isEmpty
-          ? `  Ranura ${m.slot}: [vacía]`
-          : `  Ranura ${m.slot}: Año ${m.year}, Mes ${m.month} · Pob. ${m.population} · $${m.balance}`,
+          ? t.saveSlotEmpty(m.slot)
+          : t.saveSlotFull(m.slot, m.year, m.month, m.population, m.balance),
       );
-      addLog(['=== RANURAS DE GUARDADO ===', ...lines].join('\n'), 'info', 'command');
+      addLog([t.savesHeader, ...lines].join('\n'), 'info', 'command');
       return;
     }
 
@@ -133,9 +136,9 @@ export function CommandConsole(): JSX.Element {
       return;
     }
 
-    if (msg === '__DISTRICT_PAINT_OFF__\nModo pintura desactivado.') {
+    if (msg === '__DISTRICT_PAINT_OFF__\nModo pintura desactivado.' || msg === '__DISTRICT_PAINT_OFF__\nPaint mode deactivated.') {
       setDistrictPaintMode(null);
-      addLog('Modo pintura desactivado.', 'info', 'command');
+      addLog(t.paintOff, 'info', 'command');
       return;
     }
 
@@ -147,7 +150,7 @@ export function CommandConsole(): JSX.Element {
     }
 
     addLog(msg, result.severity, 'command');
-  }, [input, state, addLog, saveGame, loadGame, getSavesMeta, undo, toggleLivestats, showLivestats, toggleCharts]);
+  }, [input, state, addLog, saveGame, loadGame, getSavesMeta, undo, consoleTab, setConsoleTab]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
@@ -212,8 +215,8 @@ export function CommandConsole(): JSX.Element {
           justifyContent: 'space-between',
         }}
       >
-        <span>COMANDOS</span>
-        <span style={{ color: '#222' }}>↑↓ historial · Tab completa</span>
+        <span>{t.consoleHeader}</span>
+        <span style={{ color: '#222' }}>{t.consoleHint}</span>
       </div>
 
       {/* Output scroll area */}
@@ -226,9 +229,7 @@ export function CommandConsole(): JSX.Element {
         }}
       >
         {cmdEntries.length === 0 && (
-          <div style={{ color: '#222', fontSize: '11px' }}>
-            Escribe &quot;help&quot; para ver los comandos disponibles.
-          </div>
+          <div style={{ color: '#222', fontSize: '11px' }}>{t.consoleEmpty}</div>
         )}
         {cmdEntries.map((entry) => (
           <OutputLine key={entry.id} entry={entry} />
@@ -278,7 +279,7 @@ export function CommandConsole(): JSX.Element {
           autoFocus
           spellCheck={false}
           autoComplete="off"
-          placeholder="help · zone · road · build · tax · next turn…"
+          placeholder={t.inputPlaceholder}
           style={{
             flex: 1,
             background: 'transparent',

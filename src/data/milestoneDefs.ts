@@ -12,8 +12,7 @@ export interface MilestoneDef {
   readonly reward: number;
   readonly isVictory: boolean;
   readonly condition: (state: GameState) => boolean;
-  /** Optional Pixelgram post text when milestone is achieved */
-  readonly pixelgramPost: string;
+  readonly pixelgramPost: { en: string; es: string };
 }
 
 export const MILESTONE_DEFS: MilestoneDef[] = [
@@ -24,8 +23,10 @@ export const MILESTONE_DEFS: MilestoneDef[] = [
     reward: 1_000,
     isVictory: false,
     condition: (s) => s.hasInfrastructure,
-    pixelgramPost:
-      '¡Alguien trazó la primera carretera! Ahora SÍ empieza la ciudad 🛣️ #PrimerPaso',
+    pixelgramPost: {
+      en: 'Someone placed the first road. It is a single tile. It is beautiful. #FirstStep',
+      es: '¡Alguien trazó la primera carretera! Ahora SÍ empieza la ciudad 🛣️ #PrimerPaso',
+    },
   },
   {
     id: 'first_residents',
@@ -34,8 +35,10 @@ export const MILESTONE_DEFS: MilestoneDef[] = [
     reward: 2_000,
     isVictory: false,
     condition: (s) => s.population >= 20,
-    pixelgramPost:
-      'Ya somos 20 vecinos 🎉 Pequeño pero nuestro. #ComunidadTerminal',
+    pixelgramPost: {
+      en: 'We are 20 now. Small. But ours. Hello to the new processes. #PixelCommunity',
+      es: 'Ya somos 20 vecinos 🎉 Pequeño pero nuestro. #ComunidadTerminal',
+    },
   },
   {
     id: 'lights_on',
@@ -44,8 +47,10 @@ export const MILESTONE_DEFS: MilestoneDef[] = [
     reward: 2_500,
     isVictory: false,
     condition: (s) => serviceCoverageRatio(s, 'electricity') >= 0.6,
-    pixelgramPost:
-      'Finalmente hay luz en más de la mitad de la ciudad ⚡ Pequeñas victorias que se celebran',
+    pixelgramPost: {
+      en: 'Power covers more than half the city. I ran my full boot sequence for the first time in weeks. ⚡',
+      es: 'Finalmente hay luz en más de la mitad de la ciudad ⚡ Pequeñas victorias que se celebran',
+    },
   },
   {
     id: 'first_business',
@@ -54,8 +59,10 @@ export const MILESTONE_DEFS: MilestoneDef[] = [
     reward: 1_500,
     isVictory: false,
     condition: (s) => s.tiles.some((t) => t.type === 'commercial' && t.population >= 10),
-    pixelgramPost:
-      'El primer negocio local ya tiene empleados. La economía empieza a rodar 💼 #LocalBusiness',
+    pixelgramPost: {
+      en: 'First local business has employees. The economy is starting to compile. 💼 #LocalBusiness',
+      es: 'El primer negocio local ya tiene empleados. La economía empieza a rodar 💼 #LocalBusiness',
+    },
   },
   {
     id: 'production_chain',
@@ -64,8 +71,10 @@ export const MILESTONE_DEFS: MilestoneDef[] = [
     reward: 3_000,
     isVictory: false,
     condition: (s) => s.productionChains.some((c) => c.satisfied),
-    pixelgramPost:
-      'La cadena de producción funciona end-to-end 🏭 Del campo a la mesa, como debe ser',
+    pixelgramPost: {
+      en: 'Full production chain running end-to-end. Input in, output out, no errors. This is civilization. 🏭',
+      es: 'La cadena de producción funciona end-to-end 🏭 Del campo a la mesa, como debe ser',
+    },
   },
   {
     id: 'first_tier2',
@@ -74,8 +83,10 @@ export const MILESTONE_DEFS: MilestoneDef[] = [
     reward: 4_000,
     isVictory: false,
     condition: (s) => s.tiles.some((t) => t.type === 'residential' && t.zoneLevel >= 2),
-    pixelgramPost:
-      'Mi barrio subió a densidad nivel 2. Los edificios crecen hacia arriba 🏢 #Densificación',
+    pixelgramPost: {
+      en: 'My district hit density level 2. The buildings are stacking. We are growing vertically now. 🏢',
+      es: 'Mi barrio subió a densidad nivel 2. Los edificios crecen hacia arriba 🏢 #Densificación',
+    },
   },
   {
     id: 'hundred_residents',
@@ -84,8 +95,10 @@ export const MILESTONE_DEFS: MilestoneDef[] = [
     reward: 5_000,
     isVictory: false,
     condition: (s) => s.population >= 100,
-    pixelgramPost:
-      'SOMOS 100 PIXELS 🎊🎊🎊 Esto ya es una ciudad de verdad. Gracias a todos',
+    pixelgramPost: {
+      en: 'WE ARE 100 PIXELS 🎊 That is a lot of active processes. This is a real city now. Thank you all.',
+      es: 'SOMOS 100 PIXELS 🎊🎊🎊 Esto ya es una ciudad de verdad. Gracias a todos',
+    },
   },
   {
     id: 'safe_city',
@@ -96,8 +109,10 @@ export const MILESTONE_DEFS: MilestoneDef[] = [
     condition: (s) =>
       serviceCoverageRatio(s, 'police') >= 0.7 &&
       serviceCoverageRatio(s, 'fire') >= 0.7,
-    pixelgramPost:
-      'Por primera vez en meses dormiré tranquila 🛡️ Cobertura de seguridad al 70%. Gracias alcalde',
+    pixelgramPost: {
+      en: 'Security coverage at 70%. For the first time in months I will run unmonitored processes without anxiety. 🛡️',
+      es: 'Por primera vez en meses dormiré tranquila 🛡️ Cobertura de seguridad al 70%. Gracias alcalde',
+    },
   },
   {
     id: 'tier3_district',
@@ -106,8 +121,10 @@ export const MILESTONE_DEFS: MilestoneDef[] = [
     reward: 8_000,
     isVictory: false,
     condition: (s) => s.tiles.some((t) => t.type === 'residential' && t.zoneLevel >= 3),
-    pixelgramPost:
-      'Nivel 3 de densidad. Desde el piso 8 se ve toda la ciudad. Esto ya es una metrópolis 🌆',
+    pixelgramPost: {
+      en: 'Density level 3. From the top floor you can see to the edge of the render distance. This is a metropolis. 🌆',
+      es: 'Nivel 3 de densidad. Desde el piso 8 se ve toda la ciudad. Esto ya es una metrópolis 🌆',
+    },
   },
   {
     id: 'traffic_master',
@@ -116,8 +133,10 @@ export const MILESTONE_DEFS: MilestoneDef[] = [
     reward: 6_000,
     isVictory: false,
     condition: (s) => s.population >= 200 && (s.avgTrafficLoad ?? 0) < 50,
-    pixelgramPost:
-      'Increíble — 200+ vecinos y el tráfico fluye sin atascos. Eso es planificación urbana de verdad 🚦✨',
+    pixelgramPost: {
+      en: '200+ citizens and traffic is still flowing. The routing algorithm is holding. Whoever designed this: well done. 🚦',
+      es: 'Increíble — 200+ vecinos y el tráfico fluye sin atascos. Eso es planificación urbana de verdad 🚦✨',
+    },
   },
   {
     id: 'city_charter',
@@ -127,12 +146,13 @@ export const MILESTONE_DEFS: MilestoneDef[] = [
     isVictory: true,
     condition: (s) =>
       s.population >= 500 && s.happiness >= 75 && s.economy.balance >= 25_000,
-    pixelgramPost:
-      '¡¡¡CARTA DE CIUDAD OTORGADA!!! Terminal City es oficialmente reconocida como CIUDAD ⭐🎊🏆 #CartaDeCiudad #Historia',
+    pixelgramPost: {
+      en: 'CITY CHARTER GRANTED. Terminal City is officially a city. We exist. Officially. ⭐🎊🏆 #CityCharter',
+      es: '¡¡¡CARTA DE CIUDAD OTORGADA!!! Terminal City es oficialmente reconocida como CIUDAD ⭐🎊🏆 #CartaDeCiudad',
+    },
   },
 ];
 
-/** Return the initial Milestone[] for GameState (all incomplete) */
 export function createInitialMilestones(): Milestone[] {
   return MILESTONE_DEFS.map((def) => ({
     id: def.id,

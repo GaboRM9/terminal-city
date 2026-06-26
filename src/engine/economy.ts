@@ -1,4 +1,4 @@
-import type { Bond, BondRating, EconomyState, GameState, ServiceType, Tile } from './types';
+import type { Bond, BondRating, EconomyState, GameState, ServiceType, Tile, ZoneType } from './types';
 import { BALANCE } from '../data/balanceConfig';
 import { BUILDINGS } from '../data/buildings';
 import { pollutionHappinessPenalty } from './pollution';
@@ -7,6 +7,16 @@ import { buildDistrictMap } from './districts';
 // ─────────────────────────────────────────────
 //  Economy calculations — all pure functions
 // ─────────────────────────────────────────────
+
+const SERVICE_BUILDING_TYPES: Record<ServiceType, ZoneType[]> = {
+  water:       ['water_pump'],
+  electricity: ['power_plant'],
+  garbage:     ['garbage_depot'],
+  police:      ['police_station'],
+  fire:        ['fire_station'],
+  education:   ['school', 'university'],
+  health:      ['hospital'],
+};
 
 const ZONE_INCOME_BASE: Record<string, number> = {
   residential: BALANCE.residentialIncomeBase,
@@ -32,25 +42,39 @@ export function calculateTotalIncome(state: GameState): number {
   const trafficIncomeMult = state.avgTrafficLoad >= 95 ? 0.7 : 1.0;
   const districtMap = buildDistrictMap(state.districts);
 
-  return state.tiles.reduce((sum, tile) => {
+  const taxIncome = state.tiles.reduce((sum, tile) => {
     const tileIdx = tile.y * state.worldWidth + tile.x;
     const district = districtMap.get(tileIdx);
-    // Use district tax rate if set, otherwise city-wide
     const effectiveTaxRate = district?.policies.taxRate ?? taxRate;
     const base = tileTaxIncome(tile, effectiveTaxRate);
     const trafficMult = (tile.type === 'commercial' || tile.type === 'industrial')
       ? trafficIncomeMult : 1.0;
     return sum + Math.floor(base * trafficMult);
   }, 0);
+
+  // Production chain income: $50 per building in each satisfied chain
+  const chainIncome = state.productionChains
+    .filter((c) => c.satisfied)
+    .reduce((sum, c) => {
+      const placed = c.nodes.reduce(
+        (n, node) => n + state.tiles.filter((t) => t.type === node.type).length,
+        0,
+      );
+      return sum + placed * BALANCE.chainIncomePerBuilding;
+    }, 0);
+
+  return taxIncome + chainIncome;
 }
 
 /** Total service expenses for the month */
 export function calculateTotalExpenses(state: GameState): number {
   let total = 0;
 
-  // Service budget allocations
+  // Service budget allocations — only charge if the relevant building is placed
   for (const budget of state.economy.serviceBudgets) {
-    total += budget.allocation;
+    const serviceBuildings = SERVICE_BUILDING_TYPES[budget.service] ?? [];
+    const hasBuilding = serviceBuildings.some((bt) => state.tiles.some((t) => t.type === bt));
+    if (hasBuilding) total += budget.allocation;
   }
 
   // Maintenance cost per building (infrastructure districts reduce by 20%)
