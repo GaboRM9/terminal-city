@@ -44,7 +44,7 @@ function OutputLine({ entry }: { entry: LogEntry }): JSX.Element {
 }
 
 export function CommandConsole(): JSX.Element {
-  const { state, addLog, saveGame, loadGame, getSavesMeta, undo, toggleLivestats, showLivestats, toggleCharts, toggleTraffic } = useGameStore();
+  const { state, addLog, saveGame, loadGame, getSavesMeta, undo, toggleLivestats, showLivestats, toggleCharts, toggleTraffic, setDistrictPaintMode } = useGameStore();
   const [input, setInput] = useState('');
   const [history, setHistory] = useState<string[]>([]);
   const [historyIdx, setHistoryIdx] = useState(-1);
@@ -121,6 +121,27 @@ export function CommandConsole(): JSX.Element {
     if (msg.startsWith('__TRAFFIC__')) {
       toggleTraffic();
       const rest = msg.replace('__TRAFFIC__\n', '');
+      if (rest) addLog(rest, 'info', 'command');
+      return;
+    }
+
+    if (msg.startsWith('__DISTRICT_PAINT__:')) {
+      const districtId = msg.split(':')[1]?.split('\n')[0];
+      const rest = msg.split('\n').slice(1).join('\n');
+      if (districtId) setDistrictPaintMode(districtId);
+      if (rest) addLog(rest, 'info', 'command');
+      return;
+    }
+
+    if (msg === '__DISTRICT_PAINT_OFF__\nModo pintura desactivado.') {
+      setDistrictPaintMode(null);
+      addLog('Modo pintura desactivado.', 'info', 'command');
+      return;
+    }
+
+    if (msg.startsWith('__DISTRICT_PAINT_OFF__')) {
+      setDistrictPaintMode(null);
+      const rest = msg.replace('__DISTRICT_PAINT_OFF__\n', '');
       if (rest) addLog(rest, 'info', 'command');
       return;
     }

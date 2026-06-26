@@ -1,5 +1,6 @@
 import type { GameState, Position, ServiceType, Tile, ZoneType } from './types';
 import { BUILDINGS } from '../data/buildings';
+import { buildDistrictMap } from './districts';
 
 // ─────────────────────────────────────────────
 //  World creation and tile manipulation
@@ -203,6 +204,7 @@ export function computeServiceCoverage(state: GameState): GameState {
   let tiles = state.tiles.map((t) => ({ ...t, coverage: {} as Tile['coverage'] }));
 
   const serviceBuildings = BUILDINGS.filter((b) => b.service !== undefined);
+  const districtMap = buildDistrictMap(state.districts);
 
   for (const tile of tiles) {
     const building = serviceBuildings.find((b) => b.type === tile.type);
@@ -212,8 +214,15 @@ export function computeServiceCoverage(state: GameState): GameState {
     const budget = state.economy.serviceBudgets.find((b) => b.service === serviceType);
 
     // Budget below threshold reduces radius
-    const effectiveRadius =
+    let effectiveRadius =
       budget && budget.allocation < 100 ? Math.floor(radius * (budget.allocation / 100)) : radius;
+
+    // Services-priority district boosts radius by 20%
+    const buildingIdx = tile.y * state.worldWidth + tile.x;
+    const district = districtMap.get(buildingIdx);
+    if (district?.policies.spendingPriority === 'services') {
+      effectiveRadius = Math.ceil(effectiveRadius * 1.2);
+    }
 
     for (let dy = -effectiveRadius; dy <= effectiveRadius; dy++) {
       for (let dx = -effectiveRadius; dx <= effectiveRadius; dx++) {

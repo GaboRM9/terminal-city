@@ -3,6 +3,7 @@ import type { GameState } from '../engine/types';
 import { getTileRenderConfig, getTileColor } from './asciiMap';
 import { useGameStore } from '../store/gameStore';
 import { BUILDINGS } from '../data/buildings';
+import { districtCentroid } from '../engine/districts';
 import {
   TILE_SIZE, RULER_W, RULER_H, CAR_COUNT,
   type PixelCar,
@@ -101,6 +102,7 @@ function drawFrame(
   roadStart: { x: number; y: number } | null,
   dimUncovered: boolean,
   showTraffic: boolean,
+  districtPaintMode: string | null,
 ): void {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -154,10 +156,16 @@ function drawFrame(
       const px = RULER_W + x * TILE_SIZE;
       const py = RULER_H + y * TILE_SIZE;
 
+      // District paint mode — show the district color on hover
+      const paintDistrict = districtPaintMode
+        ? state.districts.find((d) => d.id === districtPaintMode)
+        : null;
+
       // Tile background
       let bg = config.bgColor ?? '#0a0a0a';
       if      (isStart)                               bg = '#1a4a1a';
       else if (isPreview)                             bg = '#0f2a0f';
+      else if (isHov && districtPaintMode && paintDistrict) bg = paintDistrict.color + '33';
       else if (isHov && buildTool === 'demolish')     bg = '#2a0808';
       else if (isHov && buildTool)                    bg = '#0c1e0c';
       else if (isHov)                                 bg = '#111811';
@@ -207,6 +215,62 @@ function drawFrame(
     }
   }
 
+  // ── District overlay ─────────────────────────
+  if (state.districts.length > 0) {
+    for (const district of state.districts) {
+      if (district.tileIds.length === 0) continue;
+      const tileSet = new Set(district.tileIds);
+
+      // Semi-transparent fill
+      ctx.fillStyle = district.color + '22';
+      for (const idx of district.tileIds) {
+        const tx = idx % W;
+        const ty = Math.floor(idx / W);
+        ctx.fillRect(RULER_W + tx * TILE_SIZE, RULER_H + ty * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+      }
+
+      // Edge borders
+      ctx.strokeStyle = district.color;
+      ctx.lineWidth = 1.5;
+      for (const idx of district.tileIds) {
+        const tx = idx % W;
+        const ty = Math.floor(idx / W);
+        const px = RULER_W + tx * TILE_SIZE;
+        const py = RULER_H + ty * TILE_SIZE;
+        if (ty === 0 || !tileSet.has((ty - 1) * W + tx)) {
+          ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + TILE_SIZE, py); ctx.stroke();
+        }
+        if (ty === H - 1 || !tileSet.has((ty + 1) * W + tx)) {
+          ctx.beginPath(); ctx.moveTo(px, py + TILE_SIZE); ctx.lineTo(px + TILE_SIZE, py + TILE_SIZE); ctx.stroke();
+        }
+        if (tx === 0 || !tileSet.has(ty * W + (tx - 1))) {
+          ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, py + TILE_SIZE); ctx.stroke();
+        }
+        if (tx === W - 1 || !tileSet.has(ty * W + (tx + 1))) {
+          ctx.beginPath(); ctx.moveTo(px + TILE_SIZE, py); ctx.lineTo(px + TILE_SIZE, py + TILE_SIZE); ctx.stroke();
+        }
+      }
+
+      // District name at centroid
+      const center = districtCentroid(district, W);
+      if (center) {
+        const cx = RULER_W + center.tileX * TILE_SIZE + TILE_SIZE / 2;
+        const cy = RULER_H + center.tileY * TILE_SIZE + TILE_SIZE / 2;
+        ctx.font = '7px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#00000099';
+        ctx.fillRect(cx - 20, cy - 5, 40, 10);
+        ctx.fillStyle = district.color;
+        ctx.fillText(district.name.substring(0, 8), cx, cy);
+      }
+    }
+    // Restore defaults
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 1;
+  }
+
   // ── Cars (drawn above tiles) ─────────────────
   for (const car of cars) {
     drawCar(ctx, car);
@@ -226,7 +290,7 @@ export function MapRenderer({ dimUncovered = false }: MapRendererProps): JSX.Ele
   const roadStartRef  = useRef<{ x: number; y: number } | null>(null);
   const dimRef        = useRef(dimUncovered);
 
-  const { state, buildTool, roadStart, handleTileClick, showTraffic } = useGameStore();
+  const { state, buildTool, roadStart, handleTileClick, showTraffic, districtPaintMode } = useGameStore();
 
   stateRef.current     = state;
   buildToolRef.current = buildTool;
@@ -235,6 +299,8 @@ export function MapRenderer({ dimUncovered = false }: MapRendererProps): JSX.Ele
 
   const showTrafficRef = useRef(showTraffic);
   showTrafficRef.current = showTraffic;
+  const districtPaintRef = useRef(districtPaintMode);
+  districtPaintRef.current = districtPaintMode;
 
   const [hoverInfo, setHoverInfo] = useState('');
 
@@ -286,6 +352,7 @@ export function MapRenderer({ dimUncovered = false }: MapRendererProps): JSX.Ele
         hoveredRef.current, buildToolRef.current,
         roadStartRef.current, dimRef.current,
         showTrafficRef.current,
+        districtPaintRef.current,
       );
       frameRef.current = requestAnimationFrame(frame);
     }

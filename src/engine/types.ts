@@ -86,6 +86,26 @@ export interface ProductionChainState {
   nodes: ProductionNode[];
 }
 
+export type SpendingPriority = 'services' | 'infrastructure' | 'growth';
+
+export interface DistrictPolicies {
+  /** Per-district tax rate override (if set, overrides city-wide rate) */
+  taxRate?: number;
+  /** Zone types banned from this district */
+  bannedZones?: ZoneType[];
+  /** Spending focus that modifies simulation for tiles in this district */
+  spendingPriority?: SpendingPriority;
+}
+
+export interface District {
+  readonly id: string;
+  name: string;
+  color: string;
+  /** Flat tile indices (y * worldWidth + x) belonging to this district */
+  tileIds: number[];
+  policies: DistrictPolicies;
+}
+
 export type BondRating = 'AAA' | 'AA' | 'A' | 'BBB' | 'B' | 'D';
 
 export interface Bond {
@@ -210,6 +230,8 @@ export interface GameState {
   avgPollution: number;
   /** City-wide average road congestion (0–100), recomputed each tick */
   avgTrafficLoad: number;
+  /** Player-defined districts with independent policies */
+  districts: District[];
 }
 
 /** Command result returned to the UI */

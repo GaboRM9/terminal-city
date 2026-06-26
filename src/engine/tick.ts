@@ -3,6 +3,7 @@ import { refreshCoverage } from './services';
 import { applyMonthlyEconomics, computeHappiness, processBondPayments } from './economy';
 import { computePollution, pollutionPopCapMultiplier } from './pollution';
 import { computeTraffic } from './traffic';
+import { buildDistrictMap } from './districts';
 import { evaluateProductionChains, isTierUnlocked } from './production';
 import { generateEvents } from './events';
 import { computeTotalPopulation } from './world';
@@ -47,6 +48,7 @@ function updatePopulation(state: GameState): GameState {
     (e) => e.year === state.year && e.month === state.month && e.message.includes('Migración'),
   );
 
+  const districtMap = buildDistrictMap(state.districts);
   let tiles = [...state.tiles];
 
   for (let i = 0; i < tiles.length; i++) {
@@ -92,10 +94,14 @@ function updatePopulation(state: GameState): GameState {
         : demand.r;
       const demandFactor = Math.max(0.1, tileDemand / 100);
 
+      const tileIdx = tile.y * state.worldWidth + tile.x;
+      const tileDistrict = districtMap.get(tileIdx);
+      const growthPriorityMult = tileDistrict?.policies.spendingPriority === 'growth' ? 1.2 : 1.0;
+
       let growth = 0;
       if (serviceScore >= 2) {
         growth = Math.floor(
-          BALANCE.basePopGrowth * (serviceScore / 7) * (state.happiness / 100) * demandFactor,
+          BALANCE.basePopGrowth * (serviceScore / 7) * (state.happiness / 100) * demandFactor * growthPriorityMult,
         );
         if (migrationBoost) growth = Math.floor(growth * 1.5);
       } else if (serviceScore === 0) {
