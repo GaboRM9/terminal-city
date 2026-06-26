@@ -3,6 +3,7 @@ import { parseCoords, parseIntArg } from './parser';
 import { zoneTile, demolishTile, traceRoad, recalculateRoadAccess, setTile, getTile } from '../engine/world';
 import { setTaxRate, setServiceBudget, issueBond, computeBondRating } from '../engine/economy';
 import { pollutionLabel } from '../engine/pollution';
+import { trafficLabel } from '../engine/traffic';
 import { tick } from '../engine/tick';
 import { BUILDINGS } from '../data/buildings';
 import { TILE_LEGEND } from '../renderer/asciiMap';
@@ -134,6 +135,80 @@ export const COMMANDS: CommandDefinition[] = [
 
       const next = traceRoad(state, c1.x, c1.y, c2.x, c2.y);
       return [next, ok(`Carretera trazada de (${c1.x},${c1.y}) a (${c2.x},${c2.y}). -$${total}`)];
+    },
+  },
+
+  // ── avenue <x1> <y1> <x2> <y2> ──
+  {
+    name: 'avenue',
+    aliases: ['av', 'avenida'],
+    description: 'Traza una avenida (3× capacidad, $30/tile)',
+    usage: 'avenue <x1> <y1> <x2> <y2>',
+    execute(args, state): [GameState, ReturnType<typeof ok>] {
+      if (args.length < 4) return [state, err('Uso: avenue <x1> <y1> <x2> <y2>')];
+      const c1 = parseCoords(args[0], args[1], state.worldWidth, state.worldHeight);
+      const c2 = parseCoords(args[2], args[3], state.worldWidth, state.worldHeight);
+      if (!c1 || !c2) return [state, err('Coordenadas inválidas')];
+
+      const steps = Math.abs(c2.x - c1.x) + Math.abs(c2.y - c1.y);
+      const costPerTile = 30;
+      const total = steps * costPerTile;
+      if (state.economy.balance < total) {
+        return [state, err(`Fondos insuficientes. Necesitas $${total}.`)];
+      }
+
+      let next = state;
+      const stepX = c2.x > c1.x ? 1 : c2.x < c1.x ? -1 : 0;
+      for (let x = c1.x; x !== c2.x + stepX; x += stepX || 1) {
+        next = zoneTile(next, x, c1.y, 'avenue');
+        if (x === c2.x) break;
+      }
+      const stepY = c2.y > c1.y ? 1 : c2.y < c1.y ? -1 : 0;
+      for (let y = c1.y; y !== c2.y + stepY; y += stepY || 1) {
+        next = zoneTile(next, c2.x, y, 'avenue');
+        if (y === c2.y) break;
+      }
+      next = { ...next, economy: { ...next.economy, balance: next.economy.balance - total }, hasInfrastructure: true };
+      next = recalculateRoadAccess(next);
+      return [next, ok(`Avenida trazada de (${c1.x},${c1.y}) a (${c2.x},${c2.y}). -$${total}`)];
+    },
+  },
+
+  // ── highway <x1> <y1> <x2> <y2> ──
+  {
+    name: 'highway',
+    aliases: ['hw', 'autopista'],
+    description: 'Traza una autopista (10× capacidad, $80/tile, mínimo 3 tiles)',
+    usage: 'highway <x1> <y1> <x2> <y2>',
+    execute(args, state): [GameState, ReturnType<typeof ok>] {
+      if (args.length < 4) return [state, err('Uso: highway <x1> <y1> <x2> <y2>')];
+      const c1 = parseCoords(args[0], args[1], state.worldWidth, state.worldHeight);
+      const c2 = parseCoords(args[2], args[3], state.worldWidth, state.worldHeight);
+      if (!c1 || !c2) return [state, err('Coordenadas inválidas')];
+
+      const steps = Math.abs(c2.x - c1.x) + Math.abs(c2.y - c1.y);
+      if (steps < 3) return [state, err('La autopista requiere mínimo 3 tiles de longitud.')];
+
+      const costPerTile = 80;
+      const total = steps * costPerTile;
+      if (state.economy.balance < total) {
+        return [state, err(`Fondos insuficientes. Necesitas $${total}.`)];
+      }
+
+      let next = state;
+      const stepX = c2.x > c1.x ? 1 : c2.x < c1.x ? -1 : 0;
+      for (let x = c1.x; x !== c2.x + stepX; x += stepX || 1) {
+        next = zoneTile(next, x, c1.y, 'highway');
+        if (x === c2.x) break;
+      }
+      const stepY = c2.y > c1.y ? 1 : c2.y < c1.y ? -1 : 0;
+      for (let y = c1.y; y !== c2.y + stepY; y += stepY || 1) {
+        next = zoneTile(next, c2.x, y, 'highway');
+        if (y === c2.y) break;
+      }
+      next = { ...next, economy: { ...next.economy, balance: next.economy.balance - total }, hasInfrastructure: true };
+      next = recalculateRoadAccess(next);
+      return [next, ok(`Autopista trazada de (${c1.x},${c1.y}) a (${c2.x},${c2.y}). -$${total}`)];
     },
   },
 
@@ -458,6 +533,31 @@ export const COMMANDS: CommandDefinition[] = [
       ].join('\n');
 
       return [state, ok(msg)];
+    },
+  },
+
+  // ── view traffic ──
+  {
+    name: 'view traffic',
+    aliases: ['traffic', 'tráfico'],
+    description: 'Alterna el mapa de calor de tráfico y muestra estado de congestión',
+    usage: 'view traffic',
+    execute(_args, state): [GameState, ReturnType<typeof ok>] {
+      const avg = state.avgTrafficLoad ?? 0;
+      const roads = state.tiles.filter((t) => t.type === 'road' || t.type === 'avenue' || t.type === 'highway');
+      const maxCongested = roads.filter((t) => t.trafficLoad >= 80).length;
+      const collapsed = roads.filter((t) => t.trafficLoad >= 95).length;
+
+      const msg = [
+        `=== TRÁFICO URBANO ===`,
+        `Congestión promedio: ${avg}% — ${trafficLabel(avg)}`,
+        `Vías congestionadas (≥80%): ${maxCongested}/${roads.length}`,
+        collapsed > 0 ? `⚠ Colapso total (≥95%): ${collapsed} vías` : `Sin colapso total`,
+        `Carreteras: ${roads.filter(t=>t.type==='road').length} · Avenidas: ${roads.filter(t=>t.type==='avenue').length} · Autopistas: ${roads.filter(t=>t.type==='highway').length}`,
+        `[El mapa de calor ha sido activado/desactivado]`,
+      ].join('\n');
+
+      return [state, { success: true, message: `__TRAFFIC__\n${msg}`, severity: 'info' }];
     },
   },
 

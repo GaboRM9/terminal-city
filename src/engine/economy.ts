@@ -28,7 +28,14 @@ function tileTaxIncome(tile: Tile, taxRate: number): number {
 /** Total tax income across all tiles */
 export function calculateTotalIncome(state: GameState): number {
   const { taxRate } = state.economy;
-  return state.tiles.reduce((sum, tile) => sum + tileTaxIncome(tile, taxRate), 0);
+  // High congestion throttles commercial tax intake
+  const trafficIncomeMult = state.avgTrafficLoad >= 95 ? 0.7 : 1.0;
+  return state.tiles.reduce((sum, tile) => {
+    const base = tileTaxIncome(tile, taxRate);
+    const mult = (tile.type === 'commercial' || tile.type === 'industrial')
+      ? trafficIncomeMult : 1.0;
+    return sum + Math.floor(base * mult);
+  }, 0);
 }
 
 /** Total service expenses for the month */

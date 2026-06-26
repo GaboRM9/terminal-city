@@ -48,6 +48,7 @@ function createInitialState(): GameState {
     hasInfrastructure: false,
     history: [],
     avgPollution: 0,
+    avgTrafficLoad: 0,
   };
 }
 
@@ -94,8 +95,10 @@ interface GameStore {
   // Panel toggle: pixelgram | livestats | charts
   showLivestats: boolean;
   showCharts: boolean;
+  showTraffic: boolean;
   toggleLivestats: () => void;
   toggleCharts: () => void;
+  toggleTraffic: () => void;
 
   // Simulation control
   startSimulation: () => void;
@@ -148,8 +151,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
   roadStart: null,
   showLivestats: false,
   showCharts: false,
+  showTraffic: false,
   toggleLivestats: () => set((s) => ({ showLivestats: !s.showLivestats, showCharts: false })),
   toggleCharts: () => set((s) => ({ showCharts: !s.showCharts, showLivestats: false })),
+  toggleTraffic: () => set((s) => ({ showTraffic: !s.showTraffic })),
 
   startSimulation: () => {
     const { state } = get();

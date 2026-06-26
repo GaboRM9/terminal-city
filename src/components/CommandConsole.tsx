@@ -44,7 +44,7 @@ function OutputLine({ entry }: { entry: LogEntry }): JSX.Element {
 }
 
 export function CommandConsole(): JSX.Element {
-  const { state, addLog, saveGame, loadGame, getSavesMeta, undo, toggleLivestats, showLivestats, toggleCharts } = useGameStore();
+  const { state, addLog, saveGame, loadGame, getSavesMeta, undo, toggleLivestats, showLivestats, toggleCharts, toggleTraffic } = useGameStore();
   const [input, setInput] = useState('');
   const [history, setHistory] = useState<string[]>([]);
   const [historyIdx, setHistoryIdx] = useState(-1);
@@ -115,6 +115,13 @@ export function CommandConsole(): JSX.Element {
     const loadMatch = msg.match(/^__LOAD_(\d)__$/);
     if (loadMatch) {
       loadGame(parseInt(loadMatch[1], 10));
+      return;
+    }
+
+    if (msg.startsWith('__TRAFFIC__')) {
+      toggleTraffic();
+      const rest = msg.replace('__TRAFFIC__\n', '');
+      if (rest) addLog(rest, 'info', 'command');
       return;
     }
 

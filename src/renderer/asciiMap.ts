@@ -16,7 +16,9 @@ const EMPTY_CONFIG: TileRenderConfig = { char: '.', color: '#1a1a1a' };
 const BASE_MAP: Record<ZoneType, TileRenderConfig> = {
   empty: EMPTY_CONFIG,
   water: { char: '~', color: '#0055ff', bgColor: '#000022' },
-  road: { char: '#', color: '#666666' },
+  road:    { char: '#', color: '#666666' },
+  avenue:  { char: '=', color: '#66aaff' },
+  highway: { char: '≡', color: '#9999cc' },
   residential: { char: '░', color: '#00ff41' },
   commercial: { char: '¢', color: '#ffb000' },
   industrial: { char: '⚙', color: '#ff6600' },
@@ -107,7 +109,9 @@ export function getMinimapConfig(tile: Tile): TileRenderConfig {
 export const TILE_LEGEND: Array<{ type: ZoneType; char: string; label: string }> = [
   { type: 'empty', char: '.', label: 'Vacío' },
   { type: 'water', char: '~', label: 'Agua' },
-  { type: 'road', char: '#', label: 'Carretera' },
+  { type: 'road',    char: '#', label: 'Carretera' },
+  { type: 'avenue',  char: '=', label: 'Avenida (3× capacidad)' },
+  { type: 'highway', char: '≡', label: 'Autopista (10× capacidad)' },
   { type: 'residential', char: '░▒█', label: 'Residencial (Nivel 1-3)' },
   { type: 'commercial', char: '¢', label: 'Comercial' },
   { type: 'industrial', char: '⚙', label: 'Industrial' },

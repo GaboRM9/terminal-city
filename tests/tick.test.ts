@@ -27,6 +27,7 @@ function makeState(): GameState {
     hasInfrastructure: false,
     history: [],
     avgPollution: 0,
+    avgTrafficLoad: 0,
     rciDemand: { r: 50, c: 0, i: 0 },
     milestones: [],
     victory: false,
