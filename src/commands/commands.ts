@@ -13,7 +13,7 @@ import { TILE_LEGEND } from '../renderer/asciiMap';
 import { CHAIN_DESCRIPTIONS } from '../data/productionChains';
 import { formatMilestoneList } from '../engine/milestones';
 import { demandLabel } from '../engine/demand';
-import { createTestCity } from '../data/testCity';
+import { SEED_FACTORIES, SEED_LABELS } from '../data/testCity';
 
 // ─────────────────────────────────────────────
 //  Command registry — add new commands here
@@ -789,16 +789,30 @@ export const COMMANDS: CommandDefinition[] = [
   // ── seed ──
   {
     name: 'seed',
-    aliases: ['ciudad prueba', 'testcity'],
-    description: 'Carga una ciudad de prueba pre-construida (Año 6, ~430 hab)',
-    usage: 'seed',
-    execute(_args, _state): [GameState, ReturnType<typeof ok>] {
-      const city = createTestCity();
+    aliases: ['seeds'],
+    description: 'Carga una ciudad de prueba pre-construida. "seed" muestra la lista; "seed <1-5>" la carga.',
+    usage: 'seed [1-5]',
+    execute(args, state): [GameState, ReturnType<typeof ok>] {
+      const num = args.length > 0 ? parseInt(args[0], 10) : NaN;
+
+      if (isNaN(num)) {
+        const list = Object.entries(SEED_LABELS)
+          .map(([, v]) => `  ${v}`)
+          .join('\n');
+        return [state, ok(`=== CIUDADES DE PRUEBA ===\n${list}\n\nEscribe "seed <número>" para cargar una.`)];
+      }
+
+      const factory = SEED_FACTORIES[num];
+      if (!factory) {
+        return [state, { success: false, message: `Seed ${num} no existe. Usa un número del 1 al 5.`, severity: 'warning' as const }];
+      }
+
+      const city = factory();
       return [city, ok(
-        `Ciudad semilla cargada.\n` +
+        `${SEED_LABELS[num]}\n` +
         `Población: ${city.population} | Balance: $${city.economy.balance.toLocaleString()} | ` +
-        `Felicidad: ${city.happiness}% | Contaminación media: ${city.avgPollution}\n` +
-        `Tip: escribe "save 1" para guardarla en la ranura 1.`,
+        `Felicidad: ${city.happiness}% | Tráfico medio: ${city.avgTrafficLoad}% | Contaminación: ${city.avgPollution}\n` +
+        `Tip: escribe "save ${num}" para guardarla en esa ranura.`,
       )];
     },
   },
