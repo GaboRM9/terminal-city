@@ -176,6 +176,16 @@ export const BUILDINGS: BuildingDefinition[] = [
     maxZoneLevel: 0,
   },
   {
+    type: 'garbage_depot',
+    name: 'Depósito de Basura',
+    char: 'D',
+    color: '#88aa44',
+    cost: 800,
+    maintenanceCost: 40,
+    service: { type: 'garbage', radius: 6 },
+    maxZoneLevel: 0,
+  },
+  {
     type: 'granary',
     name: 'Granero',
     char: 'G',

@@ -250,6 +250,20 @@ export const PIXEL_ICONS: Record<string, IconGrid> = {
     ],
   ),
 
+  garbage_depot: icon(
+    { Z, z, W, H: '#88aa44', h: '#446622' },
+    [
+      '.HHhHHh.',
+      '.HHHHHH.',
+      'hHHHHHHh',
+      'hHHHHHHh',
+      'hHHHHHHh',
+      'hH.HH.Hh',
+      'hHHHHHHh',
+      'hhhhhhhh',
+    ],
+  ),
+
   // ── Production ──────────────────────────────
 
   granary: icon(

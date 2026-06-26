@@ -25,6 +25,7 @@ export type ZoneType =
   | 'foundry'
   | 'tools_workshop'
   | 'waste_plant'
+  | 'garbage_depot'
   | 'avenue'
   | 'highway';
 
@@ -179,7 +180,7 @@ export interface PixelgramPost {
   readonly authorHandle: string;
   readonly authorAvatar: string;
   readonly authorColor: string;
-  readonly content: string;
+  readonly content: { en: string; es: string };
   readonly likes: number;
   readonly reposts: number;
   readonly scenario: string;

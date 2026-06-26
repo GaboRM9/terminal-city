@@ -183,6 +183,23 @@ export function demolishTile(state: GameState, x: number, y: number): GameState 
   return recalculateRoadAccess(next);
 }
 
+/** Repair a damaged tile — costs $500, restores damage flag and zone level */
+export function repairTile(state: GameState, x: number, y: number): [GameState, string] {
+  const tile = getTile(state, x, y);
+  if (!tile) return [state, `Coordenadas (${x},${y}) fuera del mapa.`];
+  if (!tile.damaged) return [state, `El tile en (${x},${y}) no está dañado.`];
+
+  const repairCost = 500;
+  if (state.economy.balance < repairCost) {
+    return [state, `Fondos insuficientes. La reparación cuesta $${repairCost}.`];
+  }
+
+  const repairedLevel = Math.min((tile.zoneLevel + 1) as 0 | 1 | 2 | 3, tile.densityCap) as 0 | 1 | 2 | 3;
+  let next = setTile(state, x, y, { damaged: false, zoneLevel: repairedLevel });
+  next = { ...next, economy: { ...next.economy, balance: next.economy.balance - repairCost } };
+  return [next, `Tile (${x},${y}) reparado. Nivel restaurado a ${repairedLevel}. -$${repairCost}`];
+}
+
 /** Count tiles of a given type on the map */
 export function countTilesOfType(state: GameState, type: ZoneType): number {
   return state.tiles.filter((t) => t.type === type).length;

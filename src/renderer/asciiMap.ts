@@ -32,6 +32,7 @@ const BASE_MAP: Record<ZoneType, TileRenderConfig> = {
   school: { char: 'S', color: '#44ccff' },
   university: { char: 'U', color: '#aa88ff' },
   waste_plant: { char: 'Z', color: '#44aa66' },
+  garbage_depot: { char: 'D', color: '#88aa44' },
   granary: { char: 'G', color: '#aa8800' },
   mill: { char: 'M', color: '#cc9900' },
   bakery: { char: 'B', color: '#ddaa00' },

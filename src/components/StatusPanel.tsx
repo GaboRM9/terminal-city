@@ -1,5 +1,6 @@
 import { useGameStore } from '../store/gameStore';
 import type { RCIDemand } from '../engine/types';
+import { UI } from '../i18n';
 
 // ─────────────────────────────────────────────
 //  Status panel — year, money, population, happiness, RCI demand
@@ -34,7 +35,7 @@ function Bar({ value, max, color }: { value: number; max: number; color: string 
 }
 
 /** Compact RCI demand indicator: R ████░ 78  C ██░░░ 42  I █████ 96 */
-function RCIBars({ demand }: { demand: RCIDemand }): JSX.Element {
+function RCIBars({ demand, demandLabel }: { demand: RCIDemand; demandLabel: string }): JSX.Element {
   function demandColor(n: number): string {
     if (n >= 70) return TERM_GREEN;
     if (n >= 35) return TERM_AMBER;
@@ -52,7 +53,7 @@ function RCIBars({ demand }: { demand: RCIDemand }): JSX.Element {
 
   return (
     <span style={{ display: 'flex', gap: 6, alignItems: 'center', fontFamily: 'monospace' }}>
-      <span style={{ color: TERM_DIM, fontSize: 10 }}>DEMANDA</span>
+      <span style={{ color: TERM_DIM, fontSize: 10 }}>{demandLabel}</span>
       <span style={{ color: TERM_GREEN, fontSize: 10 }}>R</span>
       {miniBar(demand.r, demandColor(demand.r))}
       <span style={{ color: TERM_AMBER, fontSize: 10 }}>C</span>
@@ -63,12 +64,44 @@ function RCIBars({ demand }: { demand: RCIDemand }): JSX.Element {
   );
 }
 
-/** Compact milestone progress pill */
+function miniPct(value: number, max: number, width = 5): string {
+  const fill = Math.round(Math.min(value / max, 1) * width);
+  return '█'.repeat(fill) + '░'.repeat(width - fill);
+}
+
+/** Compact milestone progress pill — shows city charter progress when not yet complete */
 function MilestonePill(): JSX.Element {
   const { state } = useGameStore();
   const completed = state.milestones.filter((m) => m.completed).length;
   const total     = state.milestones.length;
-  const next      = state.milestones.find((m) => !m.completed);
+  const charter   = state.milestones.find((m) => m.id === 'city_charter');
+  const next      = state.milestones.find((m) => !m.completed && m.id !== 'city_charter');
+
+  if (charter && !charter.completed) {
+    const { population, happiness, economy } = state;
+    return (
+      <span style={{ color: TERM_DIM, fontSize: 10, display: 'flex', gap: 6, alignItems: 'center' }}>
+        <span>🏆 {completed}/{total}</span>
+        <span style={{ color: '#1a4a1a' }}>⭐</span>
+        <span style={{ color: '#336633' }}>Pop</span>
+        <span style={{ color: population >= 500 ? TERM_GREEN : '#336633', fontFamily: 'monospace' }}>
+          {miniPct(population, 500)}
+        </span>
+        <span style={{ color: '#336633' }}>{population}/500</span>
+        <span style={{ color: '#336633' }}>Hap</span>
+        <span style={{ color: happiness >= 75 ? TERM_GREEN : '#336633', fontFamily: 'monospace' }}>
+          {miniPct(happiness, 75)}
+        </span>
+        <span style={{ color: '#336633' }}>{happiness}/75%</span>
+        <span style={{ color: '#336633' }}>Bal</span>
+        <span style={{ color: economy.balance >= 25000 ? TERM_GREEN : '#336633', fontFamily: 'monospace' }}>
+          {miniPct(economy.balance, 25000)}
+        </span>
+        <span style={{ color: '#336633' }}>{formatMoney(economy.balance)}/$25K</span>
+      </span>
+    );
+  }
+
   return (
     <span style={{ color: TERM_DIM, fontSize: 10 }}>
       🏆 {completed}/{total}
@@ -94,11 +127,14 @@ function miniSparkline(values: number[], color: string): JSX.Element {
 }
 
 export function StatusPanel(): JSX.Element {
-  const { state } = useGameStore();
+  const { state, lang } = useGameStore();
+  const t = UI[lang];
   const { economy, population, happiness, year, month, speed, running, rciDemand, history } = state;
   const popHistory = history.map((h) => h.population);
 
-  const speedLabel = running ? `▶ ${speed === 'pause' ? 'PAUSA' : `x${speed}`}` : '⏸ PAUSA';
+  const speedLabel = running
+    ? (speed === 'pause' ? t.statusPaused : t.statusSpeed(speed))
+    : t.statusPaused;
   const balanceColor = economy.balance < 2_000 ? TERM_RED
     : economy.balance < 5_000 ? TERM_AMBER
     : TERM_GREEN;
@@ -123,9 +159,9 @@ export function StatusPanel(): JSX.Element {
       </span>
 
       <span>
-        <span style={{ color: TERM_DIM }}>Año </span>
+        <span style={{ color: TERM_DIM }}>{t.statusYear} </span>
         <span style={{ color: TERM_AMBER }}>{year}</span>
-        <span style={{ color: TERM_DIM }}> M</span>{String(month).padStart(2, '0')}
+        <span style={{ color: TERM_DIM }}> {t.statusMonth}</span>{String(month).padStart(2, '0')}
       </span>
 
       <span>
@@ -155,7 +191,7 @@ export function StatusPanel(): JSX.Element {
       </span>
 
       {/* RCI demand bars */}
-      <RCIBars demand={rciDemand} />
+      <RCIBars demand={rciDemand} demandLabel={t.statusDemand} />
 
       {/* Milestone progress */}
       <MilestonePill />

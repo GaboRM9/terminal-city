@@ -1,6 +1,6 @@
 import type { CommandDefinition, GameState, ServiceType, ZoneType } from '../engine/types';
 import { parseCoords, parseIntArg } from './parser';
-import { zoneTile, demolishTile, traceRoad, recalculateRoadAccess, setTile, getTile } from '../engine/world';
+import { zoneTile, demolishTile, traceRoad, recalculateRoadAccess, setTile, getTile, repairTile } from '../engine/world';
 import { setTaxRate, setServiceBudget, issueBond, computeBondRating } from '../engine/economy';
 import { pollutionLabel } from '../engine/pollution';
 import { trafficLabel } from '../engine/traffic';
@@ -33,7 +33,7 @@ const VALID_ZONES = new Set<ZoneType>([
 
 const VALID_BUILDINGS = new Set<ZoneType>([
   'fire_station', 'police_station', 'power_plant', 'water_pump',
-  'hospital', 'school', 'university', 'waste_plant',
+  'hospital', 'school', 'university', 'garbage_depot', 'waste_plant',
   'granary', 'mill', 'bakery', 'iron_mine', 'foundry', 'tools_workshop',
 ]);
 
@@ -814,6 +814,127 @@ export const COMMANDS: CommandDefinition[] = [
         `Felicidad: ${city.happiness}% | Tráfico medio: ${city.avgTrafficLoad}% | Contaminación: ${city.avgPollution}\n` +
         `Tip: escribe "save ${num}" para guardarla en esa ranura.`,
       )];
+    },
+  },
+
+  // ── repair <x> <y> ──
+  {
+    name: 'repair',
+    aliases: ['rep'],
+    description: 'Repara un tile dañado por evento (costo: $500)',
+    usage: 'repair <x> <y>',
+    execute(args, state): [GameState, ReturnType<typeof ok>] {
+      if (args.length < 2) return [state, err('Uso: repair <x> <y>')];
+      const coords = parseCoords(args[0], args[1], state.worldWidth, state.worldHeight);
+      if (!coords) return [state, err(`Coordenadas inválidas: ${args[0]},${args[1]}`)];
+      const [next, message] = repairTile(state, coords.x, coords.y);
+      return [next, next === state ? err(message) : ok(message)];
+    },
+  },
+
+  // ── inspect <x> <y> ──
+  {
+    name: 'inspect',
+    aliases: ['ins', 'i'],
+    description: 'Muestra detalle de un tile y sus bloqueadores de crecimiento',
+    usage: 'inspect <x> <y>',
+    execute(args, state): [GameState, ReturnType<typeof ok>] {
+      if (args.length < 2) return [state, err('Uso: inspect <x> <y>')];
+      const coords = parseCoords(args[0], args[1], state.worldWidth, state.worldHeight);
+      if (!coords) return [state, err(`Coordenadas inválidas: ${args[0]},${args[1]}`)];
+
+      const tile = getTile(state, coords.x, coords.y);
+      if (!tile) return [state, err('Coordenadas fuera del mapa')];
+
+      const services: ServiceType[] = ['water', 'electricity', 'garbage', 'police', 'fire', 'education', 'health'];
+      const serviceIcons = services.map((s) => `${s} ${tile.coverage[s] ? '✓' : '✗'}`).join('  ');
+
+      const isRCI = ['residential', 'commercial', 'industrial'].includes(tile.type);
+      const maxPop = tile.zoneLevel * 50;
+      const serviceScore = services.filter((s) => tile.coverage[s]).length;
+
+      const blockers: string[] = [];
+      if (!tile.hasRoadAccess) blockers.push('sin acceso a carretera');
+      if (tile.damaged) blockers.push('tile dañado (usa "repair")');
+      if (isRCI && serviceScore < 2) blockers.push(`necesita ≥2 servicios (tiene ${serviceScore})`);
+      if (isRCI && (tile.pollution ?? 0) >= 80) blockers.push(`contaminación crítica (${tile.pollution}/100)`);
+      if (isRCI && tile.zoneLevel >= tile.densityCap) blockers.push(`en capacidad máxima (cap: ${tile.densityCap})`);
+      if (isRCI && tile.type === 'residential' && !tile.coverage.health && tile.zoneLevel >= 2) {
+        blockers.push('nivel 3 requiere hospital');
+      }
+      if (isRCI && tile.type === 'residential' && tile.densityCap === 3 &&
+          (tile.zoneLevel < 3) && ((tile.pollution ?? 0) >= 30 || serviceScore < 7)) {
+        blockers.push('alta densidad requiere <30 contaminación y 7 servicios');
+      }
+
+      const lines = [
+        `=== TILE (${coords.x},${coords.y}) ===`,
+        `Tipo: ${tile.type.toUpperCase()} | Nivel: ${tile.zoneLevel} | Pop: ${tile.population}/${maxPop}`,
+        `Servicios: ${serviceIcons}`,
+        `Contaminación: ${tile.pollution ?? 0}  Tráfico: ${tile.trafficLoad ?? 0}  Cap densidad: ${tile.densityCap}`,
+        `Acceso carretera: ${tile.hasRoadAccess ? 'SÍ' : 'NO'}  Dañado: ${tile.damaged ? 'SÍ' : 'NO'}`,
+        blockers.length > 0
+          ? `Bloqueadores: ${blockers.join(', ')}`
+          : isRCI ? 'Sin bloqueadores — crecimiento activo' : '(tile no habitable)',
+      ];
+
+      return [state, ok(lines.join('\n'))];
+    },
+  },
+
+  // ── advisor ──
+  {
+    name: 'advisor',
+    aliases: ['consejero', 'tips'],
+    description: 'Muestra los 3 consejos más urgentes para mejorar tu ciudad',
+    usage: 'advisor',
+    execute(_args, state): [GameState, ReturnType<typeof ok>] {
+      const tips: string[] = [];
+      const hasTile = (t: ZoneType) => state.tiles.some((tile) => tile.type === t);
+      const { avgTrafficLoad, avgPollution, happiness, economy, rciDemand, population, productionChains } = state;
+
+      if (!hasTile('power_plant')) {
+        tips.push('Construye una power_plant — sin electricidad las zonas no crecen.');
+      }
+      if (!hasTile('water_pump')) {
+        tips.push('Construye una water_pump — el agua es esencial para crecer.');
+      }
+      if (!hasTile('garbage_depot') && population > 0) {
+        tips.push('Construye un garbage_depot ($800) — activa el servicio de basura y desbloquea +10 felicidad.');
+      }
+      if (population > 0 && rciDemand.c > 60 && !hasTile('commercial')) {
+        tips.push(`Demanda comercial en ${rciDemand.c}% — añade zonas comerciales para generar empleo e ingresos.`);
+      }
+      if ((avgTrafficLoad ?? 0) >= 70) {
+        tips.push(`Tráfico al ${avgTrafficLoad}% — construye avenidas o autopistas antes de colapsar.`);
+      }
+      if ((avgPollution ?? 0) >= 50) {
+        tips.push(`Contaminación en ${avgPollution} — añade parques o una waste_plant para proteger la felicidad.`);
+      }
+      if (happiness < 50 && population > 0) {
+        tips.push(`Felicidad baja (${happiness}%) — revisa cobertura de servicios con "inspect <x> <y>".`);
+      }
+      if (economy.balance < 2000 && economy.bonds.length === 0) {
+        tips.push('Balance ajustado — considera emitir un bono municipal ("bond <monto>") para financiar infraestructura.');
+      }
+      // Incomplete chains: check which are missing exactly 1 node
+      for (const chain of productionChains) {
+        if (!chain.satisfied) {
+          const missing = chain.nodes.filter((n) => !state.tiles.some((t) => t.type === n.type));
+          if (missing.length === 1) {
+            tips.push(`Cadena "${chain.chainId}" a 1 paso — añade un/a ${missing[0].type} para completarla.`);
+          }
+        }
+      }
+      if (!hasTile('park') && population > 0) {
+        tips.push('Añade un parque ($300) — reduce contaminación local y mejora la felicidad.');
+      }
+
+      const top3 = tips.slice(0, 3);
+      const lines = ['=== CONSEJERO URBANO ===', ...top3.map((t, i) => `${i + 1}. ${t}`)];
+      if (top3.length === 0) lines.push('Ciudad en buen estado. ¡Sigue expandiendo!');
+
+      return [state, ok(lines.join('\n'))];
     },
   },
 

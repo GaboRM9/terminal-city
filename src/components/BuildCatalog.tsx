@@ -3,6 +3,7 @@ import { PixelIcon } from './PixelIcon';
 import { PIXEL_ICONS } from '../data/pixelIcons';
 import { BUILDINGS } from '../data/buildings';
 import { useGameStore } from '../store/gameStore';
+import { UI } from '../i18n';
 import type { BuildTool } from '../store/gameStore';
 
 // ─────────────────────────────────────────────
@@ -11,93 +12,83 @@ import type { BuildTool } from '../store/gameStore';
 
 interface CatalogItem {
   tool: BuildTool;
-  label: string;
   cost: number;
 }
 
 interface Category {
   id: string;
-  label: string;
+  labelKey: 'catZones' | 'catServices' | 'catRoads' | 'catProduction' | 'catDemolish';
   icon: string;
   items: CatalogItem[];
 }
 
 const CATEGORIES: Category[] = [
   {
-    id: 'zones',
-    label: 'ZONAS',
-    icon: '░',
+    id: 'zones', labelKey: 'catZones', icon: '░',
     items: [
-      { tool: 'residential-low',    label: 'Res. Baja',  cost: 50 },
-      { tool: 'residential-medium', label: 'Res. Media', cost: 50 },
-      { tool: 'residential-high',   label: 'Res. Alta',  cost: 50 },
-      { tool: 'commercial-low',     label: 'Com. Baja',  cost: 100 },
-      { tool: 'commercial-medium',  label: 'Com. Media', cost: 100 },
-      { tool: 'commercial-high',    label: 'Com. Alta',  cost: 100 },
-      { tool: 'industrial-light',   label: 'Ind. Ligera',cost: 150 },
-      { tool: 'industrial-medium',  label: 'Ind. Media', cost: 150 },
-      { tool: 'industrial-heavy',   label: 'Ind. Pesada',cost: 150 },
-      { tool: 'farm',  label: 'Granja',  cost: 200 },
-      { tool: 'park',  label: 'Parque',  cost: 300 },
-      { tool: 'empty', label: 'Vaciar',  cost: 0 },
+      { tool: 'residential-low',    cost: 50 },
+      { tool: 'residential-medium', cost: 50 },
+      { tool: 'residential-high',   cost: 50 },
+      { tool: 'commercial-low',     cost: 100 },
+      { tool: 'commercial-medium',  cost: 100 },
+      { tool: 'commercial-high',    cost: 100 },
+      { tool: 'industrial-light',   cost: 150 },
+      { tool: 'industrial-medium',  cost: 150 },
+      { tool: 'industrial-heavy',   cost: 150 },
+      { tool: 'farm',               cost: 200 },
+      { tool: 'park',               cost: 300 },
+      { tool: 'empty',              cost: 0 },
     ],
   },
   {
-    id: 'services',
-    label: 'SERVICIOS',
-    icon: '⚡',
+    id: 'services', labelKey: 'catServices', icon: '⚡',
     items: [
-      { tool: 'power_plant', label: 'Planta Eléctrica', cost: 5000 },
-      { tool: 'water_pump', label: 'Bomba de Agua', cost: 2000 },
-      { tool: 'fire_station', label: 'Bomberos', cost: 1000 },
-      { tool: 'police_station', label: 'Policía', cost: 1200 },
-      { tool: 'hospital', label: 'Hospital', cost: 3000 },
-      { tool: 'school', label: 'Escuela', cost: 1500 },
-      { tool: 'university', label: 'Universidad', cost: 8000 },
-      { tool: 'waste_plant', label: 'Planta Residuos', cost: 4000 },
+      { tool: 'power_plant',    cost: 5000 },
+      { tool: 'water_pump',     cost: 2000 },
+      { tool: 'fire_station',   cost: 1000 },
+      { tool: 'police_station', cost: 1200 },
+      { tool: 'hospital',       cost: 3000 },
+      { tool: 'school',         cost: 1500 },
+      { tool: 'university',     cost: 8000 },
+      { tool: 'garbage_depot',  cost: 800  },
+      { tool: 'waste_plant',    cost: 4000 },
     ],
   },
   {
-    id: 'roads',
-    label: 'VÍAS',
-    icon: '#',
+    id: 'roads', labelKey: 'catRoads', icon: '#',
     items: [
-      { tool: 'road',    label: 'Carretera', cost: 10 },
-      { tool: 'avenue',  label: 'Avenida',   cost: 30 },
-      { tool: 'highway', label: 'Autopista', cost: 80 },
+      { tool: 'road',    cost: 10 },
+      { tool: 'avenue',  cost: 30 },
+      { tool: 'highway', cost: 80 },
     ],
   },
   {
-    id: 'production',
-    label: 'PRODUCCIÓN',
-    icon: '⚙',
+    id: 'production', labelKey: 'catProduction', icon: '⚙',
     items: [
-      { tool: 'granary', label: 'Granero', cost: 500 },
-      { tool: 'mill', label: 'Molino', cost: 800 },
-      { tool: 'bakery', label: 'Panadería', cost: 600 },
-      { tool: 'iron_mine', label: 'Mina de Hierro', cost: 2000 },
-      { tool: 'foundry', label: 'Fundición', cost: 3000 },
-      { tool: 'tools_workshop', label: 'Taller', cost: 1500 },
+      { tool: 'granary',         cost: 500 },
+      { tool: 'mill',            cost: 800 },
+      { tool: 'bakery',          cost: 600 },
+      { tool: 'iron_mine',       cost: 2000 },
+      { tool: 'foundry',         cost: 3000 },
+      { tool: 'tools_workshop',  cost: 1500 },
     ],
   },
   {
-    id: 'demolish',
-    label: 'DEMOLER',
-    icon: '×',
-    items: [
-      { tool: 'demolish', label: 'Demoler', cost: 0 },
-    ],
+    id: 'demolish', labelKey: 'catDemolish', icon: '×',
+    items: [{ tool: 'demolish', cost: 0 }],
   },
 ];
 
-function formatCost(cost: number): string {
-  if (cost === 0) return 'gratis';
+function formatCost(cost: number, freeLabel: string): string {
+  if (cost === 0) return freeLabel;
   if (cost >= 1000) return `$${(cost / 1000).toFixed(1)}K`;
   return `$${cost}`;
 }
 
 interface ItemCardProps {
   item: CatalogItem;
+  label: string;
+  freeLabel: string;
   selected: boolean;
   canAfford: boolean;
   onClick: () => void;
@@ -115,7 +106,7 @@ const DENSITY_LABEL_COLOR: Record<string, string> = {
   'residential-high': '#00ff41', 'commercial-high': '#ffd000', 'industrial-heavy': '#ff8800',
 };
 
-function ItemCard({ item, selected, canAfford, onClick }: ItemCardProps): JSX.Element {
+function ItemCard({ item, label, freeLabel, selected, canAfford, onClick }: ItemCardProps): JSX.Element {
   const [hovered, setHovered] = useState(false);
   const baseZone = DENSITY_TOOL_BASE[item.tool] ?? item.tool;
   const iconGrid = PIXEL_ICONS[baseZone] ?? PIXEL_ICONS[item.tool];
@@ -125,7 +116,7 @@ function ItemCard({ item, selected, canAfford, onClick }: ItemCardProps): JSX.El
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      title={`${item.label} — ${formatCost(item.cost)}`}
+      title={`${label} — ${formatCost(item.cost, freeLabel)}`}
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -203,7 +194,7 @@ function ItemCard({ item, selected, canAfford, onClick }: ItemCardProps): JSX.El
           whiteSpace: 'nowrap',
         }}
       >
-        {item.label}
+        {label}
       </span>
       <span
         style={{
@@ -212,7 +203,7 @@ function ItemCard({ item, selected, canAfford, onClick }: ItemCardProps): JSX.El
           fontFamily: '"JetBrains Mono", monospace',
         }}
       >
-        {formatCost(item.cost)}
+        {formatCost(item.cost, freeLabel)}
       </span>
     </button>
   );
@@ -220,101 +211,93 @@ function ItemCard({ item, selected, canAfford, onClick }: ItemCardProps): JSX.El
 
 export function BuildCatalog(): JSX.Element {
   const [activeCategory, setActiveCategory] = useState('zones');
-  const { state, buildTool, selectBuildTool } = useGameStore();
+  const { state, buildTool, selectBuildTool, lang } = useGameStore();
+  const t = UI[lang];
   const balance = state.economy.balance;
 
-  const category = CATEGORIES.find((c) => c.id === activeCategory) ?? CATEGORIES[0];
+  const category = CATEGORIES.find((c) => c.id === activeCategory) ?? CATEGORIES[0]!;
 
   const handleItemClick = (tool: BuildTool): void => {
-    // Toggle off if already selected
     selectBuildTool(buildTool === tool ? null : tool);
   };
 
   const roadHint =
     buildTool === 'road' && useGameStore.getState().roadStart !== null
-      ? ' — Haz click en el destino'
+      ? t.roadClickDest
       : buildTool === 'road'
-      ? ' — Haz click en el origen'
+      ? t.roadClickOrigin
       : null;
 
   return (
     <div
       style={{
         backgroundColor: '#0d0d0d',
-        borderTop: '1px solid #1a3a1a',
+        borderLeft: '1px solid #1a3a1a',
         fontFamily: '"JetBrains Mono", monospace',
+        width: 280,
         flexShrink: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
       }}
     >
-      {/* Category tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid #1a3a1a' }}>
+      {/* Sidebar header */}
+      <div style={{ padding: '6px 10px', borderBottom: '1px solid #1a3a1a', color: '#2a5a2a', fontSize: 10, letterSpacing: 2, flexShrink: 0 }}>
+        ░ BUILD
+        {buildTool && (
+          <span style={{ float: 'right', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ color: '#00ff41' }}>{buildTool.toUpperCase()}</span>
+            {roadHint && <span style={{ color: '#ffb000', fontSize: 9 }}>{roadHint}</span>}
+            <button
+              onClick={() => selectBuildTool(null)}
+              style={{ background: 'transparent', border: '1px solid #333', color: '#555', cursor: 'pointer', padding: '0 3px', fontSize: 9, fontFamily: 'inherit' }}
+            >
+              ESC
+            </button>
+          </span>
+        )}
+      </div>
+
+      {/* Category tabs — compact icon+label row */}
+      <div style={{ display: 'flex', borderBottom: '1px solid #1a3a1a', flexShrink: 0 }}>
         {CATEGORIES.map((cat) => (
           <button
             key={cat.id}
             onClick={() => setActiveCategory(cat.id)}
+            title={t[cat.labelKey]}
             style={{
-              padding: '5px 12px',
+              flex: 1,
+              padding: '5px 0',
               background: activeCategory === cat.id ? '#0a2a0a' : 'transparent',
               border: 'none',
               borderRight: '1px solid #1a3a1a',
               borderBottom: activeCategory === cat.id ? '2px solid #00ff41' : '2px solid transparent',
               color: activeCategory === cat.id ? '#00ff41' : '#555',
-              fontSize: 10,
+              fontSize: 13,
               cursor: 'pointer',
               fontFamily: 'inherit',
-              letterSpacing: 1,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
             }}
           >
-            <span style={{ fontSize: 12 }}>{cat.icon}</span>
-            {cat.label}
+            {cat.icon}
           </button>
         ))}
-
-        {/* Active tool indicator */}
-        {buildTool && (
-          <div
-            style={{
-              marginLeft: 'auto',
-              padding: '5px 12px',
-              color: '#00ff41',
-              fontSize: 10,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-            }}
-          >
-            <span style={{ color: '#555' }}>Herramienta:</span>
-            <span style={{ color: '#00ff41' }}>{buildTool.toUpperCase()}</span>
-            {roadHint && <span style={{ color: '#ffb000' }}>{roadHint}</span>}
-            <button
-              onClick={() => selectBuildTool(null)}
-              style={{
-                background: 'transparent',
-                border: '1px solid #333',
-                color: '#555',
-                cursor: 'pointer',
-                padding: '0 4px',
-                fontSize: 11,
-                fontFamily: 'inherit',
-              }}
-            >
-              ESC
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* Building grid */}
+      {/* Category label */}
+      <div style={{ padding: '4px 10px', fontSize: 9, color: '#2a5a2a', letterSpacing: 1, flexShrink: 0, borderBottom: '1px solid #0f1f0f' }}>
+        {t[CATEGORIES.find(c => c.id === activeCategory)!.labelKey]}
+      </div>
+
+      {/* Building grid — wraps vertically */}
       <div
         style={{
           display: 'flex',
-          gap: 6,
-          padding: '6px 10px',
-          overflowX: 'auto',
-          alignItems: 'flex-start',
+          flexWrap: 'wrap',
+          gap: 5,
+          padding: '8px',
+          overflowY: 'auto',
+          flex: 1,
+          alignContent: 'flex-start',
         }}
       >
         {category.items.map((item) => {
@@ -322,11 +305,14 @@ export function BuildCatalog(): JSX.Element {
           const building = BUILDINGS.find((b) => b.type === baseZone);
           const cost = building?.cost ?? item.cost ?? 0;
           const canAfford = cost === 0 || balance >= cost;
+          const label = t.zones[item.tool] ?? item.tool;
 
           return (
             <ItemCard
               key={item.tool}
               item={item}
+              label={label}
+              freeLabel={t.free}
               selected={buildTool === item.tool}
               canAfford={canAfford}
               onClick={() => handleItemClick(item.tool)}
@@ -336,24 +322,10 @@ export function BuildCatalog(): JSX.Element {
 
         {/* Road tip */}
         {activeCategory === 'roads' && (
-          <div
-            style={{
-              color: '#444',
-              fontSize: 10,
-              padding: '8px 12px',
-              borderLeft: '1px solid #1a3a1a',
-              marginLeft: 8,
-              maxWidth: 180,
-              lineHeight: 1.6,
-            }}
-          >
-            <div style={{ color: '#555', marginBottom: 4 }}>Cómo usar:</div>
-            <div>1. Selecciona Carretera</div>
-            <div>2. Click en el punto de inicio</div>
-            <div>3. Click en el destino</div>
-            <div style={{ color: '#ffb000', marginTop: 4 }}>
-              Costo: $10/tile
-            </div>
+          <div style={{ width: '100%', color: '#444', fontSize: 10, padding: '6px 4px', borderTop: '1px solid #1a3a1a', marginTop: 4, lineHeight: 1.6 }}>
+            <div style={{ color: '#555', marginBottom: 4 }}>{t.roadTipHow}</div>
+            {t.roadTipSteps.map((step, i) => <div key={i}>{step}</div>)}
+            <div style={{ color: '#ffb000', marginTop: 4 }}>{t.roadTipCost}</div>
           </div>
         )}
       </div>
