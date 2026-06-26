@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import type { GameState } from '../engine/types';
 import { getTileRenderConfig, getTileColor } from './asciiMap';
+import { drawSprite, getSpriteForTile, getSpriteForTool } from './sprites';
 import { useGameStore } from '../store/gameStore';
 import { BUILDINGS } from '../data/buildings';
 import { districtCentroid } from '../engine/districts';
@@ -138,10 +139,15 @@ function drawFrame(
       : new Set();
 
   // ── Tiles ────────────────────────────────────
-  const fontSize = Math.floor(TILE_SIZE * 0.60);
+  const fontSize = Math.floor(TILE_SIZE * 0.55);
   ctx.font = `bold ${fontSize}px "JetBrains Mono", monospace`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+
+  // Cache paint district lookup (same for all tiles)
+  const paintDistrict = districtPaintMode
+    ? state.districts.find((d) => d.id === districtPaintMode) ?? null
+    : null;
 
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
@@ -156,19 +162,14 @@ function drawFrame(
       const px = RULER_W + x * TILE_SIZE;
       const py = RULER_H + y * TILE_SIZE;
 
-      // District paint mode — show the district color on hover
-      const paintDistrict = districtPaintMode
-        ? state.districts.find((d) => d.id === districtPaintMode)
-        : null;
-
       // Tile background
       let bg = config.bgColor ?? '#0a0a0a';
-      if      (isStart)                               bg = '#1a4a1a';
-      else if (isPreview)                             bg = '#0f2a0f';
+      if      (isStart)                                    bg = '#1a4a1a';
+      else if (isPreview)                                  bg = '#0f2a0f';
       else if (isHov && districtPaintMode && paintDistrict) bg = paintDistrict.color + '33';
-      else if (isHov && buildTool === 'demolish')     bg = '#2a0808';
-      else if (isHov && buildTool)                    bg = '#0c1e0c';
-      else if (isHov)                                 bg = '#111811';
+      else if (isHov && buildTool === 'demolish')          bg = '#2a0808';
+      else if (isHov && buildTool)                         bg = '#0c1e0c';
+      else if (isHov)                                      bg = '#111811';
 
       ctx.fillStyle = bg;
       ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
@@ -178,21 +179,55 @@ function drawFrame(
       ctx.lineWidth = 0.5;
       ctx.strokeRect(px + 0.5, py + 0.5, TILE_SIZE - 1, TILE_SIZE - 1);
 
-      // Character
-      let char  = config.char;
-      let color = getTileColor(tile, dimUncovered);
-
-      if (isStart)   { char = '#'; color = '#55ff55'; }
-      else if (isPreview) { char = '#'; color = '#336633'; }
-      else if (isHov && buildTool && buildTool !== 'demolish') {
-        const bdef = BUILDINGS.find((b) => b.type === buildTool);
-        if (bdef) { char = bdef.char; color = bdef.color + 'aa'; }
+      // ── Sprite or fallback text ───────────────
+      if (isPreview) {
+        // Road preview: draw road sprite dimly
+        const roadSpr = getSpriteForTool('road');
+        if (roadSpr) drawSprite(ctx, roadSpr, px, py, TILE_SIZE, 0.6);
+        else {
+          ctx.fillStyle = '#336633';
+          ctx.fillText('#', px + TILE_SIZE / 2, py + TILE_SIZE / 2 + 1);
+        }
+      } else if (isStart) {
+        ctx.fillStyle = '#55ff55';
+        ctx.fillText('#', px + TILE_SIZE / 2, py + TILE_SIZE / 2 + 1);
+      } else if (isHov && buildTool && buildTool !== 'demolish') {
+        // Draw existing tile sprite first, then hover preview on top
+        const tileSpr = getSpriteForTile(tile);
+        if (tileSpr) drawSprite(ctx, tileSpr, px, py, TILE_SIZE);
+        else {
+          ctx.fillStyle = getTileColor(tile, dimUncovered);
+          ctx.fillText(config.char, px + TILE_SIZE / 2, py + TILE_SIZE / 2 + 1);
+        }
+        // Ghost preview of what will be built
+        const previewSpr = getSpriteForTool(buildTool);
+        if (previewSpr) {
+          drawSprite(ctx, previewSpr, px, py, TILE_SIZE, 0.55);
+        } else {
+          const bdef = BUILDINGS.find((b) => b.type === buildTool);
+          if (bdef) {
+            ctx.fillStyle = bdef.color + '99';
+            ctx.fillText(bdef.char, px + TILE_SIZE / 2, py + TILE_SIZE / 2 + 1);
+          }
+        }
       } else if (isHov && buildTool === 'demolish') {
-        color = '#ff220088';
+        const tileSpr = getSpriteForTile(tile);
+        if (tileSpr) drawSprite(ctx, tileSpr, px, py, TILE_SIZE, 0.4);
+        ctx.fillStyle = 'rgba(255,30,30,0.45)';
+        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+      } else if (tile.damaged) {
+        ctx.fillStyle = '#880000';
+        ctx.fillText('X', px + TILE_SIZE / 2, py + TILE_SIZE / 2 + 1);
+      } else {
+        const sprite = getSpriteForTile(tile);
+        if (sprite) {
+          drawSprite(ctx, sprite, px, py, TILE_SIZE);
+        } else {
+          // Fallback text for empty / density-hinted tiles
+          ctx.fillStyle = getTileColor(tile, dimUncovered);
+          ctx.fillText(config.char, px + TILE_SIZE / 2, py + TILE_SIZE / 2 + 1);
+        }
       }
-
-      ctx.fillStyle = color;
-      ctx.fillText(char, px + TILE_SIZE / 2, py + TILE_SIZE / 2 + 1);
 
       // Pollution overlay — orange tint proportional to pollution level
       const pol = tile.pollution ?? 0;
