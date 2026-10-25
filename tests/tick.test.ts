@@ -29,6 +29,7 @@ function makeState(): GameState {
     avgPollution: 0,
     avgTrafficLoad: 0,
     districts: [],
+    creativeMode: false,
     rciDemand: { r: 50, c: 0, i: 0 },
     milestones: [],
     victory: false,

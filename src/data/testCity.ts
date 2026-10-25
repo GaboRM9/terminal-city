@@ -100,6 +100,7 @@ function baseState(overrides: Partial<GameState>): GameState {
     avgPollution: 0,
     avgTrafficLoad: 0,
     districts: [],
+    creativeMode: false,
     ...overrides,
   };
 }
