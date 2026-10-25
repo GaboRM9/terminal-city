@@ -202,7 +202,7 @@ export function traceRoad(
   const steps = Math.abs(x2 - x1) + Math.abs(y2 - y1);
   const totalCost = steps * roadCost;
 
-  if (current.economy.balance < totalCost) {
+  if (!current.creativeMode && current.economy.balance < totalCost) {
     return current; // not enough funds — caller should emit error
   }
 
@@ -220,7 +220,7 @@ export function traceRoad(
     ...current,
     economy: {
       ...current.economy,
-      balance: current.economy.balance - totalCost,
+      balance: current.creativeMode ? current.economy.balance : current.economy.balance - totalCost,
     },
     hasInfrastructure: true,
   };

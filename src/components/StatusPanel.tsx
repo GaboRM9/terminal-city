@@ -129,7 +129,7 @@ function miniSparkline(values: number[], color: string): JSX.Element {
 export function StatusPanel(): JSX.Element {
   const { state, lang } = useGameStore();
   const t = UI[lang];
-  const { economy, population, happiness, year, month, speed, running, rciDemand, history } = state;
+  const { economy, population, happiness, year, month, speed, running, rciDemand, history, creativeMode } = state;
   const popHistory = history.map((h) => h.population);
 
   const speedLabel = running
@@ -195,6 +195,12 @@ export function StatusPanel(): JSX.Element {
 
       {/* Milestone progress */}
       <MilestonePill />
+
+      {creativeMode && (
+        <span style={{ color: '#ffb000', fontWeight: 'bold', letterSpacing: 1 }}>
+          [CREATIVO]
+        </span>
+      )}
 
       <span style={{ marginLeft: 'auto', color: TERM_DIM }}>
         {speedLabel}

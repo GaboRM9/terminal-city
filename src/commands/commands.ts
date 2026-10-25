@@ -86,17 +86,17 @@ export const COMMANDS: CommandDefinition[] = [
 
       const building = BUILDINGS.find((b) => b.type === zoneType);
       const cost = building?.cost ?? 0;
-      if (state.economy.balance < cost) {
+      if (!state.creativeMode && state.economy.balance < cost) {
         return [state, err(`Fondos insuficientes. Necesitas $${cost}, tienes $${state.economy.balance}.`)];
       }
 
       let next = zoneTile(state, coords.x, coords.y, zoneType, densityCap);
-      if (cost > 0) {
+      if (!state.creativeMode && cost > 0) {
         next = { ...next, economy: { ...next.economy, balance: next.economy.balance - cost } };
       }
       next = recalculateRoadAccess(next);
       const densityNote = densityCap ? ` [densidad: ${densityCap === 1 ? 'baja' : densityCap === 2 ? 'media' : 'alta'}]` : '';
-      return [next, ok(`Zona "${zoneType}" establecida en (${coords.x},${coords.y}). -$${cost}${densityNote}`)];
+      return [next, ok(`Zona "${zoneType}" establecida en (${coords.x},${coords.y}).${state.creativeMode ? ' [creativo]' : ` -$${cost}`}${densityNote}`)];
     },
   },
 
@@ -145,12 +145,12 @@ export const COMMANDS: CommandDefinition[] = [
       const costPerTile = BUILDINGS.find((b) => b.type === 'road')?.cost ?? 10;
       const total = steps * costPerTile;
 
-      if (state.economy.balance < total) {
+      if (!state.creativeMode && state.economy.balance < total) {
         return [state, err(`Fondos insuficientes. Necesitas $${total}.`)];
       }
 
       const next = traceRoad(state, c1.x, c1.y, c2.x, c2.y);
-      return [next, ok(`Carretera trazada de (${c1.x},${c1.y}) a (${c2.x},${c2.y}). -$${total}`)];
+      return [next, ok(`Carretera trazada de (${c1.x},${c1.y}) a (${c2.x},${c2.y}).${state.creativeMode ? ' [creativo]' : ` -$${total}`}`)];
     },
   },
 
@@ -169,7 +169,7 @@ export const COMMANDS: CommandDefinition[] = [
       const steps = Math.abs(c2.x - c1.x) + Math.abs(c2.y - c1.y);
       const costPerTile = 30;
       const total = steps * costPerTile;
-      if (state.economy.balance < total) {
+      if (!state.creativeMode && state.economy.balance < total) {
         return [state, err(`Fondos insuficientes. Necesitas $${total}.`)];
       }
 
@@ -184,9 +184,12 @@ export const COMMANDS: CommandDefinition[] = [
         next = zoneTile(next, c2.x, y, 'avenue');
         if (y === c2.y) break;
       }
-      next = { ...next, economy: { ...next.economy, balance: next.economy.balance - total }, hasInfrastructure: true };
+      if (!next.creativeMode) {
+        next = { ...next, economy: { ...next.economy, balance: next.economy.balance - total } };
+      }
+      next = { ...next, hasInfrastructure: true };
       next = recalculateRoadAccess(next);
-      return [next, ok(`Avenida trazada de (${c1.x},${c1.y}) a (${c2.x},${c2.y}). -$${total}`)];
+      return [next, ok(`Avenida trazada de (${c1.x},${c1.y}) a (${c2.x},${c2.y}).${state.creativeMode ? ' [creativo]' : ` -$${total}`}`)];
     },
   },
 
@@ -207,7 +210,7 @@ export const COMMANDS: CommandDefinition[] = [
 
       const costPerTile = 80;
       const total = steps * costPerTile;
-      if (state.economy.balance < total) {
+      if (!state.creativeMode && state.economy.balance < total) {
         return [state, err(`Fondos insuficientes. Necesitas $${total}.`)];
       }
 
@@ -222,9 +225,12 @@ export const COMMANDS: CommandDefinition[] = [
         next = zoneTile(next, c2.x, y, 'highway');
         if (y === c2.y) break;
       }
-      next = { ...next, economy: { ...next.economy, balance: next.economy.balance - total }, hasInfrastructure: true };
+      if (!next.creativeMode) {
+        next = { ...next, economy: { ...next.economy, balance: next.economy.balance - total } };
+      }
+      next = { ...next, hasInfrastructure: true };
       next = recalculateRoadAccess(next);
-      return [next, ok(`Autopista trazada de (${c1.x},${c1.y}) a (${c2.x},${c2.y}). -$${total}`)];
+      return [next, ok(`Autopista trazada de (${c1.x},${c1.y}) a (${c2.x},${c2.y}).${state.creativeMode ? ' [creativo]' : ` -$${total}`}`)];
     },
   },
 
@@ -253,17 +259,16 @@ export const COMMANDS: CommandDefinition[] = [
       const building = BUILDINGS.find((b) => b.type === buildingType);
       if (!building) return [state, err(`Edificio desconocido: "${buildingType}"`)];
 
-      if (state.economy.balance < building.cost) {
+      if (!state.creativeMode && state.economy.balance < building.cost) {
         return [state, err(`Fondos insuficientes. Necesitas $${building.cost}.`)];
       }
 
       let next = zoneTile(state, coords.x, coords.y, buildingType);
-      next = {
-        ...next,
-        economy: { ...next.economy, balance: next.economy.balance - building.cost },
-      };
+      if (!state.creativeMode) {
+        next = { ...next, economy: { ...next.economy, balance: next.economy.balance - building.cost } };
+      }
       next = recalculateRoadAccess(next);
-      return [next, ok(`${building.name} construido en (${coords.x},${coords.y}). -$${building.cost}`)];
+      return [next, ok(`${building.name} construido en (${coords.x},${coords.y}).${state.creativeMode ? ' [creativo]' : ` -$${building.cost}`}`)];
     },
   },
 
@@ -946,6 +951,20 @@ export const COMMANDS: CommandDefinition[] = [
       if (top3.length === 0) lines.push('Ciudad en buen estado. ¡Sigue expandiendo!');
 
       return [state, ok(lines.join('\n'))];
+    },
+  },
+
+  // ── creative ──
+  {
+    name: 'creative',
+    aliases: ['god', 'sandbox'],
+    description: 'Activa/desactiva el modo creativo (construcción sin costos)',
+    usage: 'creative',
+    execute(_args, state): [GameState, ReturnType<typeof ok>] {
+      const next: GameState = { ...state, creativeMode: !state.creativeMode };
+      return next.creativeMode
+        ? [next, ok('🎨 Modo creativo ACTIVADO — construye sin límite de fondos.')]
+        : [next, ok('Modo creativo desactivado — los costos normales aplican.')];
     },
   },
 

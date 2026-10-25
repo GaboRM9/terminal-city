@@ -235,6 +235,8 @@ export interface GameState {
   avgTrafficLoad: number;
   /** Player-defined districts with independent policies */
   districts: District[];
+  /** When true, all build/zone/road actions cost $0 */
+  creativeMode: boolean;
 }
 
 /** Command result returned to the UI */

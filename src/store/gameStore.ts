@@ -53,6 +53,7 @@ function createInitialState(): GameState {
     avgPollution: 0,
     avgTrafficLoad: 0,
     districts: [],
+    creativeMode: false,
   };
 }
 
@@ -221,13 +222,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   zoneAt: (x, y, zone) => {
     const { state } = get();
     const def = BUILDINGS.find((b) => b.type === zone);
-    if (def && state.economy.balance < def.cost) {
+    if (!state.creativeMode && def && state.economy.balance < def.cost) {
       get().addLog(`Fondos insuficientes. Necesitas $${def.cost}.`, 'warning', 'command');
       return;
     }
 
     let next = zoneTile(state, x, y, zone);
-    if (def && zone !== 'empty') {
+    if (!state.creativeMode && def && zone !== 'empty') {
       next = {
         ...next,
         economy: { ...next.economy, balance: next.economy.balance - def.cost },
@@ -309,7 +310,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       } else {
         const steps = Math.abs(x - roadStart.x) + Math.abs(y - roadStart.y);
         const cost = steps * 10;
-        if (state.economy.balance < cost) {
+        if (!state.creativeMode && state.economy.balance < cost) {
           get().addLog(`Fondos insuficientes. Necesitas $${cost}.`, 'warning', 'system');
           set({ roadStart: null });
           return;
@@ -336,13 +337,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const densityCap = densityInfo?.cap;
     const building = BUILDINGS.find((b) => b.type === effectiveZone);
     const cost = building?.cost ?? 0;
-    if (cost > 0 && state.economy.balance < cost) {
+    if (!state.creativeMode && cost > 0 && state.economy.balance < cost) {
       get().addLog(`Fondos insuficientes. Necesitas $${cost}.`, 'warning', 'system');
       return;
     }
 
     let next = zoneTile(state, x, y, effectiveZone, densityCap);
-    if (cost > 0) {
+    if (!state.creativeMode && cost > 0) {
       next = { ...next, economy: { ...next.economy, balance: next.economy.balance - cost } };
     }
     next = recalculateRoadAccess(next);
@@ -413,7 +414,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         return false;
       }
       const loaded = JSON.parse(raw) as GameState;
-      set({ state: { ...loaded, running: false }, actionHistory: [] });
+      set({ state: { ...loaded, running: false, creativeMode: loaded.creativeMode ?? false }, actionHistory: [] });
       get().addLog(`Partida cargada desde ranura ${slot}.`, 'info', 'system');
       return true;
     } catch {
