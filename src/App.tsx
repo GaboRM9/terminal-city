@@ -10,7 +10,6 @@ import { ChartsPanel } from './components/ChartsPanel';
 import { MainMenu } from './components/MainMenu';
 import { useGameStore } from './store/gameStore';
 import { UI } from './i18n';
-import { useState } from 'react';
 
 // ─────────────────────────────────────────────
 //  App shell — full-screen terminal layout
@@ -160,16 +159,15 @@ function CityConsole(): JSX.Element {
 // ─── App root ─────────────────────────────────────────────────────────────────
 
 export function App(): JSX.Element {
-  const { state, setSpeed, lang } = useGameStore();
+  const { state, setSpeed, lang, screen } = useGameStore();
   const t = UI[lang];
-  const [screen, setScreen] = useState<'menu' | 'game'>('menu');
 
   useEffect(() => {
     if (screen === 'game') setSpeed(1);
   }, [screen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (screen === 'menu') {
-    return <MainMenu onEnterGame={() => setScreen('game')} />;
+    return <MainMenu />;
   }
 
   return (
@@ -202,6 +200,7 @@ export function App(): JSX.Element {
         <span>
           <span style={{ color: '#00ff41' }}>{t.appTitle}</span>
           {t.appSubtitle}
+          <span style={{ color: '#2a5a2a' }}> · {state.cityName}</span>
         </span>
         <span>
           {t.tickCount(state.tickCount, state.tiles.filter((tile) => tile.type !== 'empty').length)}

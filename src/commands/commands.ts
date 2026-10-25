@@ -968,6 +968,17 @@ export const COMMANDS: CommandDefinition[] = [
     },
   },
 
+  // ── menu ──
+  {
+    name: 'menu',
+    aliases: ['exit', 'quit'],
+    description: 'Vuelve al menú principal (la partida sigue en memoria; usa save antes)',
+    usage: 'menu',
+    execute(_args, state): [GameState, ReturnType<typeof ok>] {
+      return [state, { success: true, message: '__MENU__', severity: 'info' }];
+    },
+  },
+
   // ── help ──
   {
     name: 'help',

@@ -276,16 +276,12 @@ function OptionsScreen({ t, lang, onLangChange, onBack }: OptionsScreenProps) {
 
 // ─── main menu ────────────────────────────────────────────────────────────────
 
-interface MainMenuProps {
-  onEnterGame: () => void;
-}
-
-export function MainMenu({ onEnterGame }: MainMenuProps) {
+export function MainMenu() {
   const [screen, setScreen]     = useState<MenuScreen>('main');
   const [selected, setSelected] = useState(0);
   const [blink, setBlink]       = useState(true);
 
-  const { resetGame, loadGame, getSavesMeta, lang, setLang } = useGameStore();
+  const { resetGame, loadGame, getSavesMeta, lang, setLang, setScreen: setAppScreen } = useGameStore();
   const t = UI[lang];
   const hasSaves = getSavesMeta().some((s) => !s.isEmpty);
 
@@ -326,6 +322,7 @@ export function MainMenu({ onEnterGame }: MainMenuProps) {
     useGameStore.setState({
       state: {
         ...store.state,
+        cityName: name,
         log: [{
           id:        'log-0',
           timestamp: t.timestamp,
@@ -335,12 +332,11 @@ export function MainMenu({ onEnterGame }: MainMenuProps) {
         }],
       },
     });
-    onEnterGame();
+    setAppScreen('game');
   };
 
   const handleLoad = (slot: number) => {
-    loadGame(slot);
-    onEnterGame();
+    if (loadGame(slot)) setAppScreen('game');
   };
 
   return (

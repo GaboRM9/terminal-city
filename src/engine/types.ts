@@ -237,6 +237,8 @@ export interface GameState {
   districts: District[];
   /** When true, all build/zone/road actions cost $0 */
   creativeMode: boolean;
+  /** Name chosen on the New City screen */
+  cityName: string;
 }
 
 /** Command result returned to the UI */
