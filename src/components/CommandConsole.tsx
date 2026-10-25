@@ -98,6 +98,11 @@ export function CommandConsole(): JSX.Element {
       return;
     }
 
+    if (msg === '__MENU__') {
+      useGameStore.getState().goToMenu();
+      return;
+    }
+
     if (msg === '__SAVES__') {
       const meta = getSavesMeta();
       const lines = meta.map((m) =>

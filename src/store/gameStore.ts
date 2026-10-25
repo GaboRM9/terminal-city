@@ -54,6 +54,7 @@ function createInitialState(): GameState {
     avgTrafficLoad: 0,
     districts: [],
     creativeMode: false,
+    cityName: 'Terminal City',
   };
 }
 
@@ -96,6 +97,11 @@ interface GameStore {
   // Language
   lang: Lang;
   setLang: (lang: Lang) => void;
+
+  // Top-level screen (menu or city)
+  screen: 'menu' | 'game';
+  setScreen: (screen: 'menu' | 'game') => void;
+  goToMenu: () => void;
 
   // Build mode UI state (not part of game state)
   buildTool: BuildTool | null;
@@ -162,6 +168,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setLang: (lang) => {
     setLangCache(lang);
     set({ lang });
+  },
+  screen: 'menu',
+  setScreen: (screen) => set({ screen }),
+  goToMenu: () => {
+    get().setSpeed('pause');
+    set({ screen: 'menu' });
   },
   buildTool: null,
   roadStart: null,
@@ -414,7 +426,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
         return false;
       }
       const loaded = JSON.parse(raw) as GameState;
-      set({ state: { ...loaded, running: false, creativeMode: loaded.creativeMode ?? false }, actionHistory: [] });
+      set({
+        state: {
+          ...loaded,
+          running: false,
+          creativeMode: loaded.creativeMode ?? false,
+          cityName: loaded.cityName ?? 'Terminal City',
+        },
+        actionHistory: [],
+      });
       get().addLog(`Partida cargada desde ranura ${slot}.`, 'info', 'system');
       return true;
     } catch {

@@ -31,6 +31,7 @@ function makeState(): GameState {
     avgTrafficLoad: 0,
     districts: [],
     creativeMode: false,
+    cityName: 'Test City',
     rciDemand: { r: 50, c: 0, i: 0 },
     milestones: [],
     victory: false,

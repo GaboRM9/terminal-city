@@ -101,6 +101,7 @@ function baseState(overrides: Partial<GameState>): GameState {
     avgTrafficLoad: 0,
     districts: [],
     creativeMode: false,
+    cityName: 'Test City',
     ...overrides,
   };
 }
